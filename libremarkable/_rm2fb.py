@@ -1,8 +1,6 @@
 import os
 import errno
 
-from ctypes import cdll
-
 from ctypes import byref
 from ctypes import c_char
 from ctypes import c_int
@@ -19,8 +17,7 @@ from enum import IntEnum
 from typing import overload
 
 from ._mxcfb import mxcfb_update_data
-
-libc = cdll.LoadLibrary("libc.so.6")
+from ._libc import libc
 
 
 class MSG_TYPE(IntEnum):
