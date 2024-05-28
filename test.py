@@ -5,7 +5,7 @@ from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 from libremarkable._rm2fb import send as rm2fb_send
 from libremarkable._rm2fb import xochitl_data
 from libremarkable._rm2fb import WaveformMode
-from libremarkable._framebuffer import open_framebuffer
+from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
 from libremarkable._device import DeviceType
 
@@ -30,7 +30,7 @@ rm2fb_send(xochitl_data(0, 0, 10, 10, WaveformMode.HighQualityGrayscale, 0))
 
 print(f"Device Type: {DeviceType.current()}")
 print(f"FrameBuffer path: {framebuffer_path()}")
-with open_framebuffer() as f:
+with mmap_framebuffer() as f:
     f.seek(0, io.SEEK_END)
     print(f"Size: {f.tell()}")
 

@@ -17,8 +17,12 @@ def framebuffer_path():
     return "/dev/shm/swtfb.01" if use_rm2fb() else "/dev/fb0"
 
 
-@contextmanager
 def open_framebuffer():
-    with open(framebuffer_path(), "r+b") as f:
+    return open(framebuffer_path(), "r+b")
+
+
+@contextmanager
+def mmap_framebuffer():
+    with open_framebuffer() as f:
         with mmap(f.fileno(), 0) as mm:
             yield mm
