@@ -1,0 +1,28 @@
+[project]
+name = "libremarkable"
+description = "Python library for developing applications for the reMarkable tablet."
+readme = "README.md"
+version = "1.0.0"
+requires-python = ">= 3.11"
+authors = [
+    {name = "Nathaniel van Diepen", email = "eeems@eeems.email"},
+]
+maintainers = [
+    {name = "Nathaniel van Diepen", email = "eeems@eeems.email"},
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/Eeems-Org/python-libremarkable"
+Repository = "https://github.com/Eeems-Org/python-libremarkable.git"
+Issues = "https://github.com/Eeems-Org/python-libremarkable/issues"
+
+[build-system]
+requires = ["setuptools >= 65.0"]
+build-backend = "setuptools.build_meta"
