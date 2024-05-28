@@ -4,13 +4,12 @@ from mmap import mmap
 from contextlib import contextmanager
 
 from ._device import DeviceType
+from ._device import current
 
 
 # As these may change at runtime, they are methods instead of stored at startup
 def use_rm2fb() -> bool:
-    return DeviceType.current() == DeviceType.RM2 and os.path.exists(
-        "/dev/shm/swtfb.01"
-    )
+    return current == DeviceType.RM2 and os.path.exists("/dev/shm/swtfb.01")
 
 
 def framebuffer_path():
