@@ -1,11 +1,10 @@
 import struct
 
+from ctypes import byref
 from ctypes import c_char
 from ctypes import c_int
-from ctypes import c_int32
+from ctypes import c_ushort
 from ctypes import c_uint
-from ctypes import c_uint16
-from ctypes import c_uint32
 from ctypes import c_ulong
 from ctypes import Structure
 
@@ -17,66 +16,72 @@ from ._ioctl import _IOW
 from ._ioctl import _IOWR
 from ._ioctl import _IOR
 
+from ._libc import ioctl
+
+FBIOGET_VSCREENINFO = 0x4600
+FBIOPUT_VSCREENINFO = 0x4601
+FBIOGET_FSCREENINFO = 0x4602
+
 
 class fb_fix_screeninfo(Structure):
     _fields_ = [
         ("id", c_char * 16),
         ("smem_start", c_ulong),
-        ("smem_len", c_uint32),
-        ("type", c_uint32),
-        ("type_aux", c_uint32),
-        ("visual", c_uint32),
-        ("xpanstep", c_uint16),
-        ("ypanstep", c_uint16),
-        ("ywrapstep", c_uint16),
-        ("line_length", c_uint32),
+        ("smem_len", c_uint),
+        ("type", c_uint),
+        ("type_aux", c_uint),
+        ("visual", c_uint),
+        ("xpanstep", c_ushort),
+        ("ypanstep", c_ushort),
+        ("ywrapstep", c_ushort),
+        ("line_length", c_uint),
         ("mmio_start", c_ulong),
-        ("mmio_len", c_uint32),
-        ("accel", c_uint32),
-        ("capabilities", c_uint16),
-        ("reserved", c_uint16 * 2),
+        ("mmio_len", c_uint),
+        ("accel", c_uint),
+        ("capabilities", c_ushort),
+        ("reserved", c_ushort * 2),
     ]
 
 
 class fb_bitfield(Structure):
     _fields_ = [
-        ("offset", c_uint32),
-        ("length", c_uint32),
-        ("msb_right", c_uint32),
+        ("offset", c_uint),
+        ("length", c_uint),
+        ("msb_right", c_uint),
     ]
 
 
 class fb_var_screeninfo(Structure):
     _fields_ = [
-        ("xres", c_uint32),
-        ("yres", c_uint32),
-        ("xres_virtual", c_uint32),
-        ("yres_virtual", c_uint32),
-        ("xoffset", c_uint32),
-        ("yoffset", c_uint32),
-        ("bits_per_pixel", c_uint32),
-        ("grayscale", c_uint32),
+        ("xres", c_uint),
+        ("yres", c_uint),
+        ("xres_virtual", c_uint),
+        ("yres_virtual", c_uint),
+        ("xoffset", c_uint),
+        ("yoffset", c_uint),
+        ("bits_per_pixel", c_uint),
+        ("grayscale", c_uint),
         ("red", fb_bitfield),
         ("green", fb_bitfield),
         ("blue", fb_bitfield),
         ("transp", fb_bitfield),
-        ("nonstd", c_uint32),
-        ("activate", c_uint32),
-        ("height", c_uint32),
-        ("width", c_uint32),
-        ("accel_flags", c_uint32),
-        ("pixclock", c_uint32),
-        ("left_margin", c_uint32),
-        ("right_margin", c_uint32),
-        ("upper_margin", c_uint32),
-        ("lower_margin", c_uint32),
-        ("hsync_len", c_uint32),
-        ("vsync_len", c_uint32),
-        ("sync", c_uint32),
-        ("vmode", c_uint32),
-        ("rotate", c_uint32),
-        ("colorspace", c_uint32),
-        ("reserved", c_uint32 * 4),
+        ("nonstd", c_uint),
+        ("activate", c_uint),
+        ("height", c_uint),
+        ("width", c_uint),
+        ("accel_flags", c_uint),
+        ("pixclock", c_uint),
+        ("left_margin", c_uint),
+        ("right_margin", c_uint),
+        ("upper_margin", c_uint),
+        ("lower_margin", c_uint),
+        ("hsync_len", c_uint),
+        ("vsync_len", c_uint),
+        ("sync", c_uint),
+        ("vmode", c_uint),
+        ("rotate", c_uint),
+        ("colorspace", c_uint),
+        ("reserved", c_uint * 4),
     ]
 
 
@@ -99,14 +104,14 @@ class mxcfb_loc_alpha(Structure):
 class mxcfb_color_key(Structure):
     _fields_ = [
         ("enable", c_int),
-        ("color_key", c_uint32),
+        ("color_key", c_uint),
     ]
 
 
 class mxcfb_pos(Structure):
     _fields_ = [
-        ("x", c_uint16),
-        ("y", c_uint16),
+        ("x", c_ushort),
+        ("y", c_ushort),
     ]
 
 
@@ -127,10 +132,10 @@ class mxcfb_gpu_split_fmt(Structure):
 
 class mxcfb_rect(Structure):
     _fields_ = [
-        ("top", c_uint32),
-        ("left", c_uint32),
-        ("width", c_uint32),
-        ("height", c_uint32),
+        ("top", c_uint),
+        ("left", c_uint),
+        ("width", c_uint),
+        ("height", c_uint),
     ]
 
 
@@ -181,9 +186,9 @@ FB_TEMP_AUTO_UPDATE_DISABLE = -1
 
 class mxcfb_alt_buffer_data(Structure):
     _fields_ = [
-        ("phys_addr", c_uint32),
-        ("width", c_uint32),
-        ("height", c_uint32),
+        ("phys_addr", c_uint),
+        ("width", c_uint),
+        ("height", c_uint),
         ("alt_update_region", mxcfb_rect),
     ]
 
@@ -191,9 +196,9 @@ class mxcfb_alt_buffer_data(Structure):
 class mxcfb_update_data(Structure):
     _fields_ = [
         ("update_region", mxcfb_rect),
-        ("waveform_mode", c_uint32),
-        ("update_mode", c_uint32),
-        ("update_marker", c_uint32),
+        ("waveform_mode", c_uint),
+        ("update_mode", c_uint),
+        ("update_marker", c_uint),
         ("temp", c_int),
         ("flags", c_uint),
         ("dither_mode", c_int),
@@ -204,8 +209,8 @@ class mxcfb_update_data(Structure):
 
 class mxcfb_update_marker_data(Structure):
     _fields_ = [
-        ("update_marker", c_uint32),
-        ("collision_test", c_uint32),
+        ("update_marker", c_uint),
+        ("collision_test", c_uint),
     ]
 
 
@@ -226,32 +231,63 @@ class mxcfb_csc_matrix(Structure):
     ]
 
 
-MXCFB_WAIT_FOR_VSYNC = _IOW("F", 0x20, c_uint32)
+MXCFB_WAIT_FOR_VSYNC = _IOW("F", 0x20, c_uint)
 MXCFB_SET_GBL_ALPHA = _IOW("F", 0x21, mxcfb_gbl_alpha)
 MXCFB_SET_CLR_KEY = _IOW("F", 0x22, mxcfb_color_key)
 MXCFB_SET_OVERLAY_POS = _IOWR("F", 0x24, mxcfb_pos)
-MXCFB_GET_FB_IPU_CHAN = _IOR("F", 0x25, c_uint32)
+MXCFB_GET_FB_IPU_CHAN = _IOR("F", 0x25, c_uint)
 MXCFB_SET_LOC_ALPHA = _IOWR("F", 0x26, mxcfb_loc_alpha)
 MXCFB_SET_LOC_ALP_BUF = _IOW("F", 0x27, c_ulong)
 MXCFB_SET_GAMMA = _IOW("F", 0x28, mxcfb_gamma)
-MXCFB_GET_FB_IPU_DI = _IOR("F", 0x29, c_uint32)
-MXCFB_GET_DIFMT = _IOR("F", 0x2A, c_uint32)
-MXCFB_GET_FB_BLANK = _IOR("F", 0x2B, c_uint32)
-MXCFB_SET_DIFMT = _IOW("F", 0x2C, c_uint32)
+MXCFB_GET_FB_IPU_DI = _IOR("F", 0x29, c_uint)
+MXCFB_GET_DIFMT = _IOR("F", 0x2A, c_uint)
+MXCFB_GET_FB_BLANK = _IOR("F", 0x2B, c_uint)
+MXCFB_SET_DIFMT = _IOW("F", 0x2C, c_uint)
 MXCFB_CSC_UPDATE = _IOW("F", 0x2D, mxcfb_csc_matrix)
 MXCFB_SET_GPU_SPLIT_FMT = _IOW("F", 0x2F, mxcfb_gpu_split_fmt)
 MXCFB_SET_PREFETCH = _IOW("F", 0x30, c_int)
 MXCFB_GET_PREFETCH = _IOR("F", 0x31, c_int)
 
 MXCFB_SET_WAVEFORM_MODES = _IOW("F", 0x2B, mxcfb_waveform_modes)
-MXCFB_SET_TEMPERATURE = _IOW("F", 0x2C, c_int32)
-MXCFB_SET_AUTO_UPDATE_MODE = _IOW("F", 0x2D, c_uint32)
+MXCFB_SET_TEMPERATURE = _IOW("F", 0x2C, c_int)
+MXCFB_SET_AUTO_UPDATE_MODE = _IOW("F", 0x2D, c_uint)
 MXCFB_SEND_UPDATE = _IOW("F", 0x2E, mxcfb_update_data)
 MXCFB_WAIT_FOR_UPDATE_COMPLETE = _IOWR("F", 0x2F, mxcfb_update_marker_data)
-MXCFB_SET_PWRDOWN_DELAY = _IOW("F", 0x30, c_int32)
-MXCFB_GET_PWRDOWN_DELAY = _IOR("F", 0x31, c_int32)
-MXCFB_SET_UPDATE_SCHEME = _IOW("F", 0x32, c_uint32)
+MXCFB_SET_PWRDOWN_DELAY = _IOW("F", 0x30, c_int)
+MXCFB_GET_PWRDOWN_DELAY = _IOR("F", 0x31, c_int)
+MXCFB_SET_UPDATE_SCHEME = _IOW("F", 0x32, c_uint)
 MXCFB_GET_WORK_BUFFER = _IOWR("F", 0x34, c_ulong)
-MXCFB_SET_TEMP_AUTO_UPDATE_PERIOD = _IOW("F", 0x36, c_int32)
+MXCFB_SET_TEMP_AUTO_UPDATE_PERIOD = _IOW("F", 0x36, c_int)
 MXCFB_DISABLE_EPDC_ACCESS = _IO("F", 0x35)
 MXCFB_ENABLE_EPDC_ACCESS = _IO("F", 0x36)
+
+FB_PATH = "/dev/fb0"
+
+
+class MXCFBException(Exception):
+    pass
+
+
+def get_var_screeninfo() -> fb_var_screeninfo:
+    with open(FB_PATH, "rb") as f:
+        info = fb_var_screeninfo()
+        res = ioctl(f.fileno(), FBIOGET_VSCREENINFO, byref(info))
+        if res < 0:
+            raise MXCFBException(res)
+
+        return info
+
+
+def get_fix_screeninfo() -> fb_fix_screeninfo:
+    with open(FB_PATH, "rb") as f:
+        info = fb_fix_screeninfo()
+        res = ioctl(f.fileno(), FBIOGET_FSCREENINFO, byref(info))
+        if res < 0:
+            raise MXCFBException(res)
+
+        return info
+
+
+def getsize() -> int:
+    vinfo = get_var_screeninfo()
+    return int(vinfo.xres_virtual * vinfo.yres * vinfo.bits_per_pixel / 8)
