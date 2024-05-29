@@ -330,7 +330,7 @@ def width() -> int:
 def pixel_size() -> int:
     global _pixel_width
     if _pixel_width is None:
-        _pixel_width = get_var_screeninfo().bits_per_pixel / 8
+        _pixel_width = int(get_var_screeninfo().bits_per_pixel / 8)
 
     return _pixel_width
 
