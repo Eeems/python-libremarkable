@@ -23,6 +23,27 @@ FBIOPUT_VSCREENINFO = 0x4601
 FBIOGET_FSCREENINFO = 0x4602
 
 
+class Waveform(IntEnum):
+    INIT = 0
+    DU = 1
+    GC16 = 2
+    GL16 = 3
+    GLR16 = 4
+    GLD16 = 5
+    A2 = 6
+    DU4 = 7
+    UNKNOWN = 8
+    INIT2 = 9
+
+
+class WaveformMode(IntEnum):
+    Initialize = Waveform.INIT
+    Mono = Waveform.DU
+    Grayscale = Waveform.GL16
+    HighQualityGrayscale = Waveform.GC16
+    Highlight = Waveform.UNKNOWN
+
+
 class fb_fix_screeninfo(Structure):
     _fields_ = [
         ("id", c_char * 16),
@@ -291,3 +312,28 @@ def get_fix_screeninfo() -> fb_fix_screeninfo:
 def getsize() -> int:
     vinfo = get_var_screeninfo()
     return int(vinfo.xres_virtual * vinfo.yres * vinfo.bits_per_pixel / 8)
+
+
+def update(
+    x: int, y: int, width: int, height: int, waveform: Waveform, marker: int = 0
+) -> None:
+    with open(FB_PATH, "rb") as f:
+        data = mxcfb_update_data()
+        data.update_region.left = x
+        data.update_region.top = y
+        data.update_region.width = width
+        data.update_region.height = height
+        data.waveform_mode = waveform
+        data.update_marker = marker
+        res = ioctl(f.fileno(), MXCFB_SEND_UPDATE, byref(data))
+        if res < 0:
+            raise MXCFBException(res)
+
+
+def wait(marker: int) -> None:
+    with open(FB_PATH, "rb") as f:
+        data = mxcfb_update_marker_data()
+        data.update_marker = marker
+        res = ioctl(f.fileno(), MXCFB_WAIT_FOR_UPDATE_COMPLETE, byref(data))
+        if res < 0:
+            raise MXCFBException(res)

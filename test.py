@@ -6,6 +6,9 @@ from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
 from libremarkable._framebuffer import framebuffer_size
+from libremarkable._framebuffer import update
+from libremarkable._framebuffer import wait
+from libremarkable._framebuffer import WaveformMode
 from libremarkable import deviceType
 
 FAILED = False
@@ -30,6 +33,10 @@ print(f"FrameBuffer path: {framebuffer_path()}")
 print(f"Size: {framebuffer_size()}")
 with mmap_framebuffer() as f:
     pass
+
+marker = 1
+update(0, 0, 500, 500, WaveformMode.HighQualityGrayscale, marker)
+wait(marker)
 
 if FAILED:
     sys.exit(1)

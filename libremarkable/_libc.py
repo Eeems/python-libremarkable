@@ -4,6 +4,8 @@ from ctypes import c_ulong
 from ctypes import get_errno
 
 libc = cdll.LoadLibrary("libc.so.6")
+msgsnd = libc.msgsnd
+msgget = libc.msgget
 
 
 def ioctl(fd, request, *args):
