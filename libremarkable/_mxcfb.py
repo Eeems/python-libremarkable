@@ -180,6 +180,7 @@ WAVEFORM_MODE_GLD16 = 5
 WAVEFORM_MODE_AUTO = 257
 
 TEMP_USE_AMBIENT = 0x1000
+TEMP_USE_REMARKABLE_DRAW = 0x0018
 
 EPDC_FLAG_ENABLE_INVERSION = 0x01
 EPDC_FLAG_FORCE_MONOCHROME = 0x02
@@ -315,6 +316,7 @@ def getsize() -> int:
 
 
 _width = None
+_pixel_width = None
 
 
 def width() -> int:
@@ -325,17 +327,16 @@ def width() -> int:
     return _width
 
 
-def update(
-    x: int, y: int, width: int, height: int, waveform: Waveform, marker: int = 0
-) -> None:
+def pixel_size() -> int:
+    global _pixel_width
+    if _pixel_width is None:
+        _pixel_width = get_var_screeninfo().bits_per_pixel / 8
+
+    return _pixel_width
+
+
+def update(data: mxcfb_update_data) -> None:
     with open(FB_PATH, "rb") as f:
-        data = mxcfb_update_data()
-        data.update_region.left = x
-        data.update_region.top = y
-        data.update_region.width = width
-        data.update_region.height = height
-        data.waveform_mode = waveform
-        data.update_marker = marker
         res = ioctl(f.fileno(), MXCFB_SEND_UPDATE, byref(data))
         if res < 0:
             raise MXCFBException(res)

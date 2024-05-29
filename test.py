@@ -6,6 +6,7 @@ from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
 from libremarkable._framebuffer import framebuffer_size
+from libremarkable._framebuffer import framebuffer_pixel_size
 from libremarkable._framebuffer import update
 from libremarkable._framebuffer import wait
 from libremarkable._framebuffer import set_pixel
@@ -34,14 +35,20 @@ print(f"Device Type: {deviceType}")
 print(f"FrameBuffer path: {framebuffer_path()}")
 print(f"Size: {framebuffer_size()}")
 print(f"rm2fb: {use_rm2fb()}")
+print(f"Pixel Size: {framebuffer_pixel_size()}")
+posY = posX = 0
+width = height = 500
+white = 0xFFFF
+black = 0x0000
 with mmap_framebuffer() as mm:
-    for y in range(0, 500):
-        for x in range(0, 500):
-            set_pixel(mm, x, y, 0xFFFFFFFF)
+    for y in range(posY, height):
+        for x in range(posX, width):
+            set_pixel(mm, x, y, white)
 
     marker = 1
-    update(0, 0, 500, 500, WaveformMode.HighQualityGrayscale, marker)
+    update(posX, posY, width, height, WaveformMode.HighQualityGrayscale, marker)
     wait(marker)
+
 
 if FAILED:
     sys.exit(1)

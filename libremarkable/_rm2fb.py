@@ -5,6 +5,7 @@ from ctypes import byref
 from ctypes import c_char
 from ctypes import c_int
 from ctypes import c_long
+from ctypes import c_ushort
 from ctypes import c_uint32
 from ctypes import get_errno
 from ctypes import sizeof
@@ -122,3 +123,13 @@ def send(data):
 
 def width():
     return 1404
+
+
+def pixel_size():
+    return sizeof(c_ushort)
+
+
+def wait(marker: int) -> None:
+    data = wait_sem_data()
+    data.smem_name = f"/rm2fb.wait.{os.getpid()}"
+    send(data)
