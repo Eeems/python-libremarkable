@@ -314,6 +314,17 @@ def getsize() -> int:
     return int(vinfo.xres_virtual * vinfo.yres * vinfo.bits_per_pixel / 8)
 
 
+_width = None
+
+
+def width() -> int:
+    global _width
+    if _width is None:
+        _width = get_var_screeninfo().xres_virtual
+
+    return _width
+
+
 def update(
     x: int, y: int, width: int, height: int, waveform: Waveform, marker: int = 0
 ) -> None:

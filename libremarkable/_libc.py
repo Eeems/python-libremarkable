@@ -1,3 +1,5 @@
+import os
+
 from ctypes import cdll
 from ctypes import c_int
 from ctypes import c_ulong

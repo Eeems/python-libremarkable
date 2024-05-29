@@ -118,3 +118,7 @@ def send(data):
 
     else:
         raise NotImplementedError()
+
+
+def width():
+    return 1404
