@@ -3,6 +3,7 @@ import sys
 
 from mmap import mmap
 from mmap import MAP_SHARED
+from mmap import MAP_POPULATE
 from mmap import PROT_READ
 from mmap import PROT_WRITE
 from mmap import ACCESS_DEFAULT
@@ -68,7 +69,7 @@ def mmap_framebuffer():
         with mmap(
             f.fileno(),
             framebuffer_size(),
-            flags=MAP_SHARED,
+            flags=MAP_SHARED | MAP_POPULATE,
             prot=PROT_READ | PROT_WRITE,
             access=ACCESS_DEFAULT,
         ) as mm:
@@ -100,6 +101,6 @@ def wait(marker: int) -> None:
     rm2fb_wait(marker) if use_rm2fb() else mxcfb_wait(marker)
 
 
-def set_pixel(mm: mmap, x: int, y: int, color: int) -> None:
+def set_pixel(mm: mmap, x: int, y: int, color: bytes) -> None:
     mm.seek(y * framebuffer_width() + x)
-    mm.write(color.to_bytes(framebuffer_pixel_size(), sys.byteorder))
+    mm.write(color)
