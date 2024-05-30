@@ -69,6 +69,10 @@ def framebuffer_pixel_size() -> int:
     return rm2fb_pixel_size() if use_rm2fb() else mxcfb_pixel_size()
 
 
+def framebuffer_stride() -> int:
+    return framebuffer_width() * framebuffer_pixel_size()
+
+
 _fb = None
 
 
@@ -88,7 +92,8 @@ def mmap_framebuffer():
         _fb = {
             "f": f,
             "mm": mm,
-            "data": (c_t * int(mm.size() / sizeof(c_t))).from_buffer(mm),
+            "data": (c_t * int(size / sizeof(c_t))).from_buffer(mm),
+            "view": memoryview(mm),
         }
 
     yield _fb["data"]
@@ -99,6 +104,7 @@ def close_mmap_framebuffer():
     if _fb is not None:
         del _fb["data"]
         _fb["data"] = None
+        _fb["view"].release()
         _fb["mm"].close()
         _fb["f"].close()
         _fb = None
@@ -120,7 +126,7 @@ def update(
     data.update_region.height = height
     data.waveform_mode = waveform
     data.update_mode = UPDATE_MODE_PARTIAL if partial else UPDATE_MODE_FULL
-    data.temp = TEMP_USE_REMARKABLE_DRAW
+    # data.temp = TEMP_USE_REMARKABLE_DRAW
     data.update_marker = marker
     rm2fb_update(data) if use_rm2fb() else mxcfb_update(data)
 
@@ -129,9 +135,36 @@ def wait(marker: int) -> None:
     rm2fb_wait(marker) if use_rm2fb() else mxcfb_wait(marker)
 
 
+def get_address(x: int, y: int) -> int:
+    # For use with memoryview
+    return y * framebuffer_stride() + (x * framebuffer_pixel_size())
+
+
+def get_offset(x: int, y: int) -> int:
+    # For use with c_ushort array
+    return y * framebuffer_width() + x
+
+
 def set_pixel(x: int, y: int, color: c_t) -> None:
     global _fb
     if _fb is None:
         mmap_framebuffer().__enter__()
 
-    _fb["data"][y * framebuffer_width() + x] = color
+    _fb["data"][get_offset(x, y)] = color
+
+
+def set_row(x: int, y: int, width: int, color: c_t) -> None:
+    global _fb
+    if _fb is None:
+        mmap_framebuffer().__enter__()
+
+    _fb["view"][get_address(x, y) : get_address(x + width, y)] = bytes(color) * width
+
+
+def set_col(x: int, y: int, height: int, color: c_t) -> None:
+    global _fb
+    if _fb is None:
+        mmap_framebuffer().__enter__()
+
+    for i in range(y, y + height):
+        set_pixel(x, i, color)

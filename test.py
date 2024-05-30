@@ -18,12 +18,16 @@ from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import close_mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
 from libremarkable._framebuffer import framebuffer_size
+from libremarkable._framebuffer import framebuffer_width
 from libremarkable._framebuffer import framebuffer_pixel_size
 from libremarkable._framebuffer import update
 from libremarkable._framebuffer import wait
 from libremarkable._framebuffer import set_pixel
+from libremarkable._framebuffer import set_row
+from libremarkable._framebuffer import set_col
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
+from libremarkable._framebuffer import get_address
 from libremarkable._color import WHITE
 from libremarkable._color import BLACK
 from libremarkable._color import c_t
@@ -46,11 +50,13 @@ def assertv(name, value, expected):
 
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
 assertv("pixel_size", framebuffer_pixel_size(), sizeof(c_t))
+assertv("get_address(0, 0)", get_address(0, 0), 0)
 
 print(f"Device Type: {deviceType}")
 print(f"FrameBuffer path: {framebuffer_path()}")
 print(f"Size: {framebuffer_size()}")
 print(f"rm2fb: {use_rm2fb()}")
+print(f"Width: {framebuffer_width()}")
 
 
 @contextmanager
@@ -61,20 +67,29 @@ def performance_log(msg: str = ""):
     print(f"{msg}: {(end - start) / 1000000}ms")
 
 
-posY = posX = 0
-width = height = 500
-with performance_log("Pixel Painting"):
-    for y in range(posY, height):
-        for x in range(posX, width):
-            set_pixel(x, y, WHITE)
-
 marker = 1
-with performance_log("Send Update"):
-    update(posX, posY, width, height, WaveformMode.HighQualityGrayscale, marker)
+with performance_log("White Rectangle"):
+    for y in range(0, 500):
+        set_row(0, y, 500, WHITE)
 
-with performance_log("Wait on screen"):
-    wait(marker)
+with performance_log("Border"):
+    set_row(0, 501, 500, BLACK)
+    set_row(0, 502, 500, BLACK)
+    set_row(0, 503, 500, BLACK)
+    set_col(501, 0, 500, BLACK)
+    set_col(502, 0, 500, BLACK)
+    set_col(503, 0, 500, BLACK)
 
+update(0, 0, 503, 503, WaveformMode.HighQualityGrayscale, marker)
+wait(marker)
+marker += 1
+with performance_log("Checkboard"):
+    for y in range(200, 300, 2):
+        for x in range(200, 300, 2):
+            set_pixel(x, y, BLACK)
+
+update(200, 200, 300, 300, WaveformMode.Mono, marker)
+wait(marker)
 marker += 1
 
 close_mmap_framebuffer()
