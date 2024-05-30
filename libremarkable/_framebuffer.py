@@ -69,18 +69,39 @@ def framebuffer_pixel_size() -> int:
     return rm2fb_pixel_size() if use_rm2fb() else mxcfb_pixel_size()
 
 
+_fb = None
+
+
 @contextmanager
 def mmap_framebuffer():
-    with open_framebuffer() as f:
+    global _fb
+    if _fb is None:
+        f = open_framebuffer()
         size = framebuffer_size()
-        with mmap(
+        mm = mmap(
             f.fileno(),
             size,
             flags=MAP_SHARED | MAP_POPULATE,
             prot=PROT_READ | PROT_WRITE,
             access=ACCESS_DEFAULT,
-        ) as mm:
-            yield (c_t * int(mm.size() / sizeof(c_t))).from_buffer(mm)
+        )
+        _fb = {
+            "f": f,
+            "mm": mm,
+            "data": (c_t * int(mm.size() / sizeof(c_t))).from_buffer(mm),
+        }
+
+    yield _fb["data"]
+
+
+def close_mmap_framebuffer():
+    global _fb
+    if _fb is not None:
+        del _fb["data"]
+        _fb["data"] = None
+        _fb["mm"].close()
+        _fb["f"].close()
+        _fb = None
 
 
 def update(
@@ -108,5 +129,9 @@ def wait(marker: int) -> None:
     rm2fb_wait(marker) if use_rm2fb() else mxcfb_wait(marker)
 
 
-def set_pixel(mm, x: int, y: int, color: c_t) -> None:
-    mm[y * framebuffer_width() + x] = color
+def set_pixel(x: int, y: int, color: c_t) -> None:
+    global _fb
+    if _fb is None:
+        mmap_framebuffer().__enter__()
+
+    _fb["data"][y * framebuffer_width() + x] = color
