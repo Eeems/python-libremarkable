@@ -43,7 +43,7 @@ class xochitl_data(Union):
 
 class wait_sem_data(Union):
     _fields_ = [
-        ("sem_name", c_int),
+        ("sem_name", c_char * 512),
     ]
 
 
@@ -131,5 +131,5 @@ def pixel_size():
 
 def wait(marker: int) -> None:
     data = wait_sem_data()
-    data.smem_name = f"/rm2fb.wait.{os.getpid()}"
+    data.sem_name = f"/rm2fb.wait.{os.getpid()}".encode("utf-8")
     send(data)
