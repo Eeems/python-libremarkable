@@ -3,6 +3,10 @@ import time
 
 from io import SEEK_END
 
+from ctypes import c_uint
+
+from contextlib import contextmanager
+
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
@@ -13,6 +17,8 @@ from libremarkable._framebuffer import wait
 from libremarkable._framebuffer import set_pixel
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
+from libremarkable._color import WHITE
+from libremarkable._color import BLACK
 from libremarkable import deviceType
 
 FAILED = False
@@ -38,23 +44,34 @@ print(f"FrameBuffer path: {framebuffer_path()}")
 print(f"Size: {framebuffer_size()}")
 print(f"rm2fb: {use_rm2fb()}")
 
-white = 0xFFFF.to_bytes(framebuffer_pixel_size(), sys.byteorder)
-black = 0x0000.to_bytes(framebuffer_pixel_size(), sys.byteorder)
-start = time.perf_counter_ns()
+
+@contextmanager
+def performance_log(msg: str = ""):
+    start = time.perf_counter_ns()
+    yield
+    end = time.perf_counter_ns()
+    print(f"{msg}: {(end - start) / 1000000}ms")
+
+
 with mmap_framebuffer() as mm:
     posY = posX = 0
     width = height = 500
-    for y in range(posY, height):
-        for x in range(posX, width):
-            set_pixel(mm, x, y, white)
+    with performance_log("Pixel Painting"):
+        for y in range(posY, height):
+            for x in range(posX, width):
+                set_pixel(mm, x, y, WHITE)
 
     marker = 1
-    update(posX, posY, width, height, WaveformMode.HighQualityGrayscale, marker)
-    wait(marker)
+    with performance_log("Send Update"):
+        update(posX, posY, width, height, WaveformMode.HighQualityGrayscale, marker)
+
+    with performance_log("Wait on screen"):
+        wait(marker)
+
     marker += 1
 
-end = time.perf_counter_ns()
-print(f"Draw time: {(end - start) / 1000000}ms")
+    del mm  # required to avoid a BufferError
+
 
 if FAILED:
     sys.exit(1)
