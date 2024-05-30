@@ -1,12 +1,13 @@
 import os
 import errno
+import time
 
 from ctypes import byref
 from ctypes import c_char
 from ctypes import c_int
 from ctypes import c_long
 from ctypes import c_ushort
-from ctypes import c_uint32
+from ctypes import c_ulonglong
 from ctypes import get_errno
 from ctypes import sizeof
 from ctypes import Structure
@@ -21,6 +22,8 @@ from ._mxcfb import mxcfb_update_data
 from ._mxcfb import Waveform
 from ._libc import msgsnd
 from ._libc import msgget
+
+DEBUG_TIMING = "DEBUG_TIMING" in os.environ
 
 
 class MSG_TYPE(IntEnum):
@@ -47,7 +50,7 @@ class wait_sem_data(Union):
     ]
 
 
-class swtfb_update_mdata(Union):
+class _swtfb_update_mdata(Union):
     _fields_ = [
         ("xochitl_update", xochitl_data),
         ("update", mxcfb_update_data),
@@ -55,10 +58,16 @@ class swtfb_update_mdata(Union):
     ]
 
 
+class swtfb_update_mdata(Structure):
+    _anonymous_ = ("_union_data",)
+    _fields_ = [
+        ("_union_data", _swtfb_update_mdata),
+    ] + ([("ms", c_ulonglong)] if DEBUG_TIMING else [])
+
+
 class swtfb_update(Structure):
     _fields_ = [
         ("mtype", c_long),
-        ("length", c_uint32),
         ("mdata", swtfb_update_mdata),
     ]
 
@@ -93,6 +102,9 @@ def send(data: mxcfb_update_data) -> None:
 def send(data):
     global msqid
     msg = swtfb_update()
+    if DEBUG_TIMING:
+        msg.mdata.ms = time.time_ns() // 1_000_000
+
     if isinstance(data, wait_sem_data):
         msg.mtype = MSG_TYPE.WAIT
         msg.mdata.wait_update = data
@@ -112,6 +124,14 @@ def send(data):
     elif isinstance(data, mxcfb_update_data):
         msg.mtype = MSG_TYPE.UPDATE
         msg.mdata.update = data
+        if DEBUG_TIMING:
+            print(
+                f"MSG Q SEND {msg.mdata.ms} {data.update_region.left},{data.update_region.top} "
+                f"{data.update_region.width}x{data.update_region.height} "
+                f"{data.waveform_mode} {data.update_mode} {data.update_marker} "
+                f"{data.temp}"
+            )
+
         res = msgsnd(msqid, byref(msg), sizeof(msg.mdata.update), 0)
         if res < 0:
             err = os.strerror(get_errno())
