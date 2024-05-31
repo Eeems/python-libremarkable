@@ -238,20 +238,25 @@ def draw_rect(
 def draw_image(left: int, top: int, image: Image) -> None:
     width = image.width
     height = image.height
-    assert 0 <= left <= framebuffer_width() - width
-    assert 0 <= top <= framebuffer_height() - height
-    assert width and height
+    assert 0 <= left < framebuffer_width(), f"left of {left} is invalid"
+    assert 0 <= top < framebuffer_height(), f"right of {right} is invalid"
+    assert 0 < width <= framebuffer_width(), f"width of {width} is invalid"
+    assert 0 < height <= framebuffer_height(), f"height of {height} is invalid"
+    # Split out red green and blue channels to work on
     r, g, b = image.split()
-    r.point(lambda r: _rgb8_to_5_lut[r] << 11)
-    g.point(lambda g: _rgb8_to_6_lut[g] << 5)
+    # Convert image with rgb565 LUT
+    r.point(lambda r: _rgb8_to_5_lut[r])
+    g.point(lambda g: _rgb8_to_6_lut[g])
     b.point(lambda b: _rgb8_to_5_lut[b])
+    # Load pixels for quick access
     rp = r.load()
     gp = g.load()
     bp = b.load()
     for y in range(0, image.height):
         data = (c_t * width)()
         for x in range(0, image.width):
-            data[x] = rp[x, y] | gp[x, y] | bp[x, y]
+            # Merge converted red green and blue pixels into two bytes
+            data[x] = rp[x, y] << 11 | gp[x, y] << 5 | bp[x, y]
 
         _set_line_to_data(left, top + y, width, data)
 
