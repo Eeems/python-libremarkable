@@ -145,6 +145,13 @@ def width():
     return 1404
 
 
+stride = width
+
+
+def height():
+    return 1872
+
+
 def pixel_size():
     return sizeof(c_ushort)
 

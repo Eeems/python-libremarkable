@@ -310,21 +310,47 @@ def get_fix_screeninfo() -> fb_fix_screeninfo:
         return info
 
 
-def getsize() -> int:
-    vinfo = get_var_screeninfo()
-    return int(vinfo.xres_virtual * vinfo.yres * vinfo.bits_per_pixel / 8)
-
-
 _width = None
+_height = None
+_stride = None
 _pixel_width = None
+
+
+def getsize() -> int:
+    global _width
+    global _height
+    global _stride
+    global _pixel_width
+    vinfo = get_var_screeninfo()
+    _width = vinfo.xres
+    _height = vinfo.yres
+    _stride = vinfo.xres_virtual
+    _pixel_width = int(vinfo.bits_per_pixel / 8)
+    return int(_stride * _height * _pixel_width)
 
 
 def width() -> int:
     global _width
     if _width is None:
-        _width = get_var_screeninfo().xres_virtual
+        _width = get_var_screeninfo().xres
 
     return _width
+
+
+def stride() -> int:
+    global _stride
+    if _stride is None:
+        _stride = get_var_screeninfo().xres_virtual
+
+    return _stride
+
+
+def height() -> int:
+    global _height
+    if _height is None:
+        _height = get_var_screeninfo().yres
+
+    return _height
 
 
 def pixel_size() -> int:

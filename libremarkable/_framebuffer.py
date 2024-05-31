@@ -22,7 +22,9 @@ from ._mxcfb import WaveformMode
 from ._mxcfb import update as mxcfb_update
 from ._mxcfb import wait as mxcfb_wait
 from ._mxcfb import width as mxcfb_width
+from ._mxcfb import height as mxcfb_height
 from ._mxcfb import pixel_size as mxcfb_pixel_size
+from ._mxcfb import stride as mxcfb_stride
 from ._mxcfb import UPDATE_MODE_PARTIAL
 from ._mxcfb import UPDATE_MODE_FULL
 from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
@@ -30,7 +32,9 @@ from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
 from ._rm2fb import send as rm2fb_update
 from ._rm2fb import wait as rm2fb_wait
 from ._rm2fb import width as rm2fb_width
+from ._rm2fb import height as rm2fb_height
 from ._rm2fb import pixel_size as rm2fb_pixel_size
+from ._rm2fb import stride as rm2fb_stride
 from ._rm2fb import mxcfb_update_data
 from ._rm2fb import wait_sem_data
 
@@ -65,12 +69,16 @@ def framebuffer_width() -> int:
     return rm2fb_width() if use_rm2fb() else mxcfb_width()
 
 
+def framebuffer_height() -> int:
+    return rm2fb_height() if use_rm2fb() else mxcfb_height()
+
+
 def framebuffer_pixel_size() -> int:
     return rm2fb_pixel_size() if use_rm2fb() else mxcfb_pixel_size()
 
 
 def framebuffer_stride() -> int:
-    return framebuffer_width() * framebuffer_pixel_size()
+    return rm2fb_stride() if use_rm2fb() else mxcfb_stride()
 
 
 _fb = None
@@ -93,7 +101,6 @@ def mmap_framebuffer():
             "f": f,
             "mm": mm,
             "data": (c_t * int(size / sizeof(c_t))).from_buffer(mm),
-            "view": memoryview(mm),
         }
 
     yield _fb["data"]
@@ -104,7 +111,6 @@ def close_mmap_framebuffer():
     if _fb is not None:
         del _fb["data"]
         _fb["data"] = None
-        _fb["view"].release()
         _fb["mm"].close()
         _fb["f"].close()
         _fb = None
@@ -118,6 +124,7 @@ def update(
     waveform: WaveformMode,
     marker: int = 0,
     partial=True,
+    sync=False,
 ) -> None:
     data = mxcfb_update_data()
     data.update_region.left = x
@@ -129,42 +136,64 @@ def update(
     # data.temp = TEMP_USE_REMARKABLE_DRAW
     data.update_marker = marker
     rm2fb_update(data) if use_rm2fb() else mxcfb_update(data)
+    if wait:
+        wait(marker)
+
+
+def update_full(waveform: WaveformMode, marker: int = 0, sync=False):
+    update(
+        0,
+        0,
+        framebuffer_width(),
+        framebuffer_height(),
+        waveform,
+        marker,
+        partial=False,
+        sync=sync,
+    )
 
 
 def wait(marker: int) -> None:
     rm2fb_wait(marker) if use_rm2fb() else mxcfb_wait(marker)
 
 
-def get_address(x: int, y: int) -> int:
-    # For use with memoryview
-    return y * framebuffer_stride() + (x * framebuffer_pixel_size())
+def get_row_offset(y: int) -> int:
+    assert 0 <= y <= framebuffer_height()
+    return y * framebuffer_stride()
 
 
 def get_offset(x: int, y: int) -> int:
-    # For use with c_ushort array
-    return y * framebuffer_width() + x
+    assert 0 <= x <= framebuffer_width(), f"{x} not within bounds"
+    assert 0 <= y <= framebuffer_height(), f"{y} not within bounds"
+    return get_row_offset(y) + x
+
+
+def _ensure_fb():
+    global _fb
+    if _fb is None:
+        mmap_framebuffer().__enter__()
+
+    return _fb
 
 
 def set_pixel(x: int, y: int, color: c_t) -> None:
-    global _fb
-    if _fb is None:
-        mmap_framebuffer().__enter__()
-
-    _fb["data"][get_offset(x, y)] = color
+    _ensure_fb()["data"][get_offset(x, y)] = color
 
 
 def set_row(x: int, y: int, width: int, color: c_t) -> None:
-    global _fb
-    if _fb is None:
-        mmap_framebuffer().__enter__()
-
-    _fb["view"][get_address(x, y) : get_address(x + width, y)] = bytes(color) * width
+    assert width > 0
+    assert x + width <= framebuffer_width()
+    data = (c_t * width).from_buffer(bytearray(color) * width)
+    _ensure_fb()["data"][get_offset(x, y) : get_offset(x + width, y)] = data
 
 
 def set_col(x: int, y: int, height: int, color: c_t) -> None:
-    global _fb
-    if _fb is None:
-        mmap_framebuffer().__enter__()
-
+    assert height
+    assert x + height <= framebuffer_height()
     for i in range(y, y + height):
         set_pixel(x, i, color)
+
+
+def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
+    for y in range(top, top + height):
+        set_row(left, y, width, color)

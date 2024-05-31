@@ -19,15 +19,18 @@ from libremarkable._framebuffer import close_mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
 from libremarkable._framebuffer import framebuffer_size
 from libremarkable._framebuffer import framebuffer_width
+from libremarkable._framebuffer import framebuffer_height
+from libremarkable._framebuffer import framebuffer_stride
 from libremarkable._framebuffer import framebuffer_pixel_size
 from libremarkable._framebuffer import update
-from libremarkable._framebuffer import wait
+from libremarkable._framebuffer import update_full
 from libremarkable._framebuffer import set_pixel
 from libremarkable._framebuffer import set_row
 from libremarkable._framebuffer import set_col
+from libremarkable._framebuffer import set_rect
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
-from libremarkable._framebuffer import get_address
+from libremarkable._framebuffer import get_offset
 from libremarkable._color import WHITE
 from libremarkable._color import BLACK
 from libremarkable._color import c_t
@@ -50,13 +53,15 @@ def assertv(name, value, expected):
 
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
 assertv("pixel_size", framebuffer_pixel_size(), sizeof(c_t))
-assertv("get_address(0, 0)", get_address(0, 0), 0)
+assertv("get_offset(0, 0)", get_offset(0, 0), 0)
 
 print(f"Device Type: {deviceType}")
 print(f"FrameBuffer path: {framebuffer_path()}")
 print(f"Size: {framebuffer_size()}")
+print(f"Stride: {framebuffer_stride()}")
 print(f"rm2fb: {use_rm2fb()}")
 print(f"Width: {framebuffer_width()}")
+print(f"Height: {framebuffer_height()}")
 
 
 @contextmanager
@@ -68,29 +73,32 @@ def performance_log(msg: str = ""):
 
 
 marker = 1
-with performance_log("White Rectangle"):
-    for y in range(0, 500):
-        set_row(0, y, 500, WHITE)
+with performance_log("Init to white"):
+    set_rect(0, 0, framebuffer_width(), framebuffer_height(), WHITE)
+    update_full(WaveformMode.Initialize, marker, sync=True)
+    marker += 1
 
-with performance_log("Border"):
-    set_row(0, 501, 500, BLACK)
-    set_row(0, 502, 500, BLACK)
-    set_row(0, 503, 500, BLACK)
-    set_col(501, 0, 500, BLACK)
-    set_col(502, 0, 500, BLACK)
-    set_col(503, 0, 500, BLACK)
+with performance_log("Total"):
+    with performance_log("Black Rectangle"):
+        set_rect(0, 0, 500, 500, BLACK)
+        set_pixel(500, 500, BLACK)
 
-update(0, 0, 503, 503, WaveformMode.HighQualityGrayscale, marker)
-wait(marker)
-marker += 1
-with performance_log("Checkboard"):
-    for y in range(200, 300, 2):
-        for x in range(200, 300, 2):
-            set_pixel(x, y, BLACK)
+    with performance_log("Border"):
+        set_rect(0, 501, 504, 3, BLACK)
+        set_rect(501, 0, 3, 504, BLACK)
 
-update(200, 200, 300, 300, WaveformMode.Mono, marker)
-wait(marker)
-marker += 1
+    update(0, 0, 503, 503, WaveformMode.Mono, marker, sync=True)
+    marker += 1
+    with performance_log("Checkboard background"):
+        set_rect(200, 200, 100, 100, WHITE)
+
+    with performance_log("Checkboard dots"):
+        for y in range(200, 300, 2):
+            for x in range(200, 300, 2):
+                set_pixel(x, y, BLACK)
+
+    update(200, 200, 300, 300, WaveformMode.Mono, marker, sync=True)
+    marker += 1
 
 close_mmap_framebuffer()
 

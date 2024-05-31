@@ -14,6 +14,6 @@ def ioctl(fd, request, *args):
     res = libc.ioctl(c_int(fd), c_ulong(request), *args)
     if res < 0:
         err = get_errno()
-        raise OSError(err, os.strerror(err))
+        raise OSError(err, os.strerror(err) if err else "Unknown")
 
     return res
