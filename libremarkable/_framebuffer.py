@@ -195,6 +195,7 @@ def set_col(x: int, y: int, height: int, color: c_t) -> None:
 
 
 def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
+    print(f"{left},{top} {width}x{height}")
     for y in range(top, top + height):
         set_row(left, y, width, color)
 
@@ -202,4 +203,13 @@ def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
 def set_color(color: c_t) -> None:
     data = _ensure_fb()["data"]
     size = len(data)
-    data = (c_t * size).from_buffer(bytearray(color) * size)
+    data[0:size] = (c_t * size).from_buffer(bytearray(color) * size)
+
+
+def draw_rect(
+    left: int, top: int, right: int, bottom: int, color: c_t, lineSize: int = 1
+) -> None:
+    set_rect(left, top, right - left, lineSize, color)  # Top line
+    set_rect(left, bottom - lineSize, right - left, lineSize, color)  # Bottom line
+    set_rect(left, top, lineSize, bottom - top, color)  # Left line
+    set_rect(right - lineSize, top, lineSize, bottom - top, color)  # Right line

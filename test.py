@@ -29,6 +29,7 @@ from libremarkable._framebuffer import set_row
 from libremarkable._framebuffer import set_col
 from libremarkable._framebuffer import set_rect
 from libremarkable._framebuffer import set_color
+from libremarkable._framebuffer import draw_rect
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
 from libremarkable._framebuffer import get_offset
@@ -83,29 +84,26 @@ with performance_log("Screen Update"):
 
 with performance_log("Total"):
     with performance_log("Black Rectangle"):
-        set_rect(0, 0, 500, 500, BLACK)
-        set_pixel(500, 500, BLACK)
+        set_rect(10, 10, 500, 500, BLACK)
 
     with performance_log("Border"):
-        set_rect(0, 501, 504, 3, BLACK)
-        set_rect(501, 0, 3, 504, BLACK)
+        draw_rect(6, 6, 514, 514, BLACK, lineSize=3)
 
     with performance_log("Screen Update"):
-        update(0, 0, 504, 504, WaveformMode.Mono, marker, sync=True)
+        update(0, 0, 520, 520, WaveformMode.Mono, marker)
+        marker += 1
 
-    marker += 1
     with performance_log("Checkboard background"):
-        set_rect(200, 200, 100, 100, WHITE)
+        set_rect(210, 210, 100, 100, WHITE)
 
     with performance_log("Checkboard dots"):
-        for y in range(200, 300, 2):
-            for x in range(200, 300, 2):
+        for y in range(210, 310, 2):
+            for x in range(210, 310, 2):
                 set_pixel(x, y, BLACK)
 
     with performance_log("Screen Update"):
-        update(200, 200, 300, 300, WaveformMode.Mono, marker, sync=True)
-
-    marker += 1
+        update(210, 210, 310, 310, WaveformMode.Mono, marker)
+        marker += 1
 
 close_mmap_framebuffer()
 
