@@ -31,9 +31,15 @@ _rgb5_to_8_lut = []
 for x in range(0, 32):
     _rgb5_to_8_lut.insert(x, (x * 527 + 23) >> 6)
 
+# Pad to 256 entries for use with PIL.Image.point
+_rgb5_to_8_lut += [0] * (256 - len(_rgb5_to_8_lut))
+
 _rgb6_to_8_lut = []
 for x in range(0, 64):
     _rgb6_to_8_lut.insert(x, (x * 259 + 33) >> 6)
+
+# Pad to 256 entries for use with PIL.Image.point
+_rgb6_to_8_lut += [0] * (256 - len(_rgb6_to_8_lut))
 
 
 def rgb565_to_rgb888(color: int) -> tuple[int]:

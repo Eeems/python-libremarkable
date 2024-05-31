@@ -18,10 +18,13 @@ from PIL import ImageFont
 from PIL import ImageColor
 
 from ._color import c_t
+from ._color import get_rgb565
 from ._color import rgb888_to_rgb565
 from ._color import rgb565_to_rgb888
 from ._color import _rgb8_to_5_lut
 from ._color import _rgb8_to_6_lut
+from ._color import _rgb5_to_8_lut
+from ._color import _rgb6_to_8_lut
 
 from ._device import DeviceType
 from ._device import current
@@ -238,20 +241,18 @@ def draw_rect(
 def draw_image(left: int, top: int, image: Image) -> None:
     width = image.width
     height = image.height
+
     assert 0 <= left < framebuffer_width(), f"left of {left} is invalid"
     assert 0 <= top < framebuffer_height(), f"right of {right} is invalid"
     assert 0 < width <= framebuffer_width(), f"width of {width} is invalid"
     assert 0 < height <= framebuffer_height(), f"height of {height} is invalid"
+
     # Split out red green and blue channels to work on
     r, g, b = image.split()
-    # Convert image with rgb565 LUT
-    r.point(lambda r: _rgb8_to_5_lut[r])
-    g.point(lambda g: _rgb8_to_6_lut[g])
-    b.point(lambda b: _rgb8_to_5_lut[b])
-    # Load pixels for quick access
-    rp = r.load()
-    gp = g.load()
-    bp = b.load()
+    # Convert image with rgb565 to rgb888 LUT
+    rp = r.point(_rgb8_to_5_lut).load()
+    gp = g.point(_rgb8_to_6_lut).load()
+    bp = b.point(_rgb8_to_5_lut).load()
     for y in range(0, image.height):
         data = (c_t * width)()
         for x in range(0, image.width):
@@ -299,11 +300,20 @@ def to_image(
     assert 0 < width <= framebuffer_width() - left, f"width of {width} is invalid"
     assert 0 < height <= framebuffer_height() - top, f"height of {height} is invalid"
 
+    # Load data with rgb565 values
     image = Image.new("RGB", (width, height))
     for y in range(0, height):
         image.putdata(
-            [rgb565_to_rgb888(x) for x in get_row(left, y + top, width)],
+            [get_rgb565(x) for x in get_row(left, y + top, width)],
             offset=y * width,
         )
 
-    return image
+    pixels = image.load()
+    # Split out red green and blue channels to work with
+    r, g, b = image.split()
+    # Convert image with rgb888 to rgb565 LUT
+    r = r.point(_rgb5_to_8_lut)
+    g = g.point(_rgb6_to_8_lut)
+    b = b.point(_rgb5_to_8_lut)
+    # Merge back into rgb image
+    return Image.merge("RGB", (r, g, b))
