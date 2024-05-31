@@ -234,15 +234,18 @@ def draw_rect(
 
 
 def draw_image(left: int, top: int, image: Image) -> None:
+    width = image.width
+    height = image.height
+    assert 0 <= left <= framebuffer_width() - width
+    assert 0 <= top <= framebuffer_height() - height
+    assert width and height
     # TODO - explore if Image.split and Image.point would result in
     #        faster conversion of values, and the resulting integers
     #        can just be compacted into the two bytes needed for rgb565
-    width = image.width
     for y in range(0, image.height):
         data = (c_t * width)()
         for x in range(0, image.width):
-            p = image.getpixel((x, y))
-            data[x] = rgb888_to_rgb565(*p)
+            data[x] = rgb888_to_rgb565(*image.getpixel((x, y)))
 
         _set_line_to_data(left, top + y, width, data)
 

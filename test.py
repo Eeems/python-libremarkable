@@ -13,6 +13,7 @@ from ctypes import sizeof
 
 from contextlib import contextmanager
 
+from PIL import Image
 from PIL import ImageColor
 
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
@@ -33,6 +34,7 @@ from libremarkable._framebuffer import set_rect
 from libremarkable._framebuffer import set_color
 from libremarkable._framebuffer import draw_rect
 from libremarkable._framebuffer import draw_text
+from libremarkable._framebuffer import draw_image
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
 from libremarkable._framebuffer import get_offset
@@ -146,6 +148,10 @@ with performance_log("Save text from framebuffer"):
 
 with performance_log("Save entire framebuffer"):
     to_image().save("/home/root/py.fb.png")
+
+image = Image.open("/home/root/py.fb.png")
+with performance_log("Replace framebuffer with contents of image"):
+    draw_image(0, 0, image)
 
 close_mmap_framebuffer()
 
