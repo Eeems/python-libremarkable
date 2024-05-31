@@ -20,6 +20,8 @@ from PIL import ImageColor
 from ._color import c_t
 from ._color import rgb888_to_rgb565
 from ._color import rgb565_to_rgb888
+from ._color import _rgb8_to_5_lut
+from ._color import _rgb8_to_6_lut
 
 from ._device import DeviceType
 from ._device import current
@@ -239,13 +241,17 @@ def draw_image(left: int, top: int, image: Image) -> None:
     assert 0 <= left <= framebuffer_width() - width
     assert 0 <= top <= framebuffer_height() - height
     assert width and height
-    # TODO - explore if Image.split and Image.point would result in
-    #        faster conversion of values, and the resulting integers
-    #        can just be compacted into the two bytes needed for rgb565
+    r, g, b = image.split()
+    r.point(lambda r: _rgb8_to_5_lut[r] << 11)
+    g.point(lambda g: _rgb8_to_6_lut[g] << 5)
+    b.point(lambda b: _rgb8_to_5_lut[b])
+    rp = r.load()
+    gp = g.load()
+    bp = b.load()
     for y in range(0, image.height):
         data = (c_t * width)()
         for x in range(0, image.width):
-            data[x] = rgb888_to_rgb565(*image.getpixel((x, y)))
+            data[x] = rp[x, y] | gp[x, y] | bp[x, y]
 
         _set_line_to_data(left, top + y, width, data)
 

@@ -11,6 +11,14 @@ if ! type pip &> /dev/null; then
     opkg update
     opkg install python3-pip
 fi
+if ! python -c 'import PIL' &> /dev/null; then
+    if ! type opkg &> /dev/null; then
+        echo "Opkg not found, please install toltec"
+        exit 1
+    fi
+    opkg update
+    opkg install python3-pillow
+fi
 pip uninstall -qy libremarkable
 pip install \
   --extra-index-url https://wheels.eeems.codes \
