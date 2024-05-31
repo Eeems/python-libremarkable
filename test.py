@@ -28,6 +28,7 @@ from libremarkable._framebuffer import set_pixel
 from libremarkable._framebuffer import set_row
 from libremarkable._framebuffer import set_col
 from libremarkable._framebuffer import set_rect
+from libremarkable._framebuffer import set_color
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
 from libremarkable._framebuffer import get_offset
@@ -74,8 +75,10 @@ def performance_log(msg: str = ""):
 
 marker = 1
 with performance_log("Init to white"):
-    set_rect(0, 0, framebuffer_width(), framebuffer_height(), WHITE)
-    update_full(WaveformMode.Initialize, marker, sync=True)
+    set_color(WHITE)
+
+with performance_log("Screen Update"):
+    update_full(WaveformMode.HighQualityGrayscale, marker, sync=True)
     marker += 1
 
 with performance_log("Total"):
@@ -87,7 +90,9 @@ with performance_log("Total"):
         set_rect(0, 501, 504, 3, BLACK)
         set_rect(501, 0, 3, 504, BLACK)
 
-    update(0, 0, 503, 503, WaveformMode.Mono, marker, sync=True)
+    with performance_log("Screen Update"):
+        update(0, 0, 504, 504, WaveformMode.Mono, marker, sync=True)
+
     marker += 1
     with performance_log("Checkboard background"):
         set_rect(200, 200, 100, 100, WHITE)
@@ -97,7 +102,9 @@ with performance_log("Total"):
             for x in range(200, 300, 2):
                 set_pixel(x, y, BLACK)
 
-    update(200, 200, 300, 300, WaveformMode.Mono, marker, sync=True)
+    with performance_log("Screen Update"):
+        update(200, 200, 300, 300, WaveformMode.Mono, marker, sync=True)
+
     marker += 1
 
 close_mmap_framebuffer()

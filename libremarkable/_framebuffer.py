@@ -197,3 +197,9 @@ def set_col(x: int, y: int, height: int, color: c_t) -> None:
 def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
     for y in range(top, top + height):
         set_row(left, y, width, color)
+
+
+def set_color(color: c_t) -> None:
+    data = _ensure_fb()["data"]
+    size = len(data)
+    data = (c_t * size).from_buffer(bytearray(color) * size)
