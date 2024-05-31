@@ -11,8 +11,8 @@ if ! type pip &> /dev/null; then
     opkg update
     opkg install python3-pip
 fi
+pip uninstall -qy libremarkable
 pip install \
-  --force-reinstall \
   --extra-index-url https://wheels.eeems.codes \
   /tmp/libremarkable-${VERSION}-py3-none-any.whl
 endef
@@ -21,7 +21,11 @@ define EXECUTABLE_SCRIPT
 cd /src
 source /opt/lib/nuitka/bin/activate
 echo "[info] Installing dependencies"
-python -m pip install --extra-index-url=https://wheels.eeems.codes/ wheel nuitka
+python -m pip install \
+	--extra-index-url=https://wheels.eeems.codes/ \
+	wheel \
+	nuitka \
+	-r requirements.txt
 echo "[info] Building"
 NUITKA_CACHE_DIR=$(pwd)/.nuitka \
 python -m nuitka \
@@ -30,16 +34,13 @@ python -m nuitka \
     --output-dir=dist \
     --report=compilation-report.xml \
     test.py
-if [ -d dist/test.build ]; then \
-    rm -r dist/test.build; \
-fi
 endef
 export EXECUTABLE_SCRIPT
 
-dist/libremarkable-${VERSION}.tar.gz: $(shell find libremarkable -type f)
+dist/libremarkable-${VERSION}.tar.gz: $(shell find libremarkable -type f) pyproject.toml
 	python -m build --sdist
 
-dist/libremarkable-${VERSION}-py3-none-any.whl: $(shell find libremarkable -type f)
+dist/libremarkable-${VERSION}-py3-none-any.whl: $(shell find libremarkable -type f) pyproject.toml
 	python -m build --wheel
 
 clean:

@@ -13,6 +13,8 @@ from ctypes import sizeof
 
 from contextlib import contextmanager
 
+from PIL import ImageColor
+
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import close_mmap_framebuffer
@@ -30,12 +32,18 @@ from libremarkable._framebuffer import set_col
 from libremarkable._framebuffer import set_rect
 from libremarkable._framebuffer import set_color
 from libremarkable._framebuffer import draw_rect
+from libremarkable._framebuffer import draw_text
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
 from libremarkable._framebuffer import get_offset
+from libremarkable._framebuffer import to_image
+from libremarkable._framebuffer import get_pixel
+from libremarkable._framebuffer import get_row
 from libremarkable._color import WHITE
 from libremarkable._color import BLACK
 from libremarkable._color import c_t
+from libremarkable._color import rgb565_to_rgb888
+from libremarkable._color import rgb888_to_rgb565
 from libremarkable import deviceType
 
 FAILED = False
@@ -53,9 +61,25 @@ def assertv(name, value, expected):
     print(f"  {value} != {expected}")
 
 
+def asserti(name, value, expected):
+    global FAILED
+    print(f"Testing {name}: ", end="")
+    if isinstance(value, expected):
+        print("pass")
+        return
+
+    FAILED = True
+    print("fail")
+    print(f"  {type(value).__name__} not instance of {expected.__name__}")
+
+
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
 assertv("pixel_size", framebuffer_pixel_size(), sizeof(c_t))
-assertv("get_offset(0, 0)", get_offset(0, 0), 0)
+assertv("get_offset", get_offset(0, 0), 0)
+white = ImageColor.getrgb("white")
+assertv("rgb565_to_rgb888", rgb565_to_rgb888(WHITE.value), white)
+assertv("rgb888_to_rgb565", rgb888_to_rgb565(*white), WHITE.value)
+asserti("get_pixel", get_pixel(0, 0), int)
 
 print(f"Device Type: {deviceType}")
 print(f"FrameBuffer path: {framebuffer_path()}")
@@ -104,6 +128,16 @@ with performance_log("Total"):
     with performance_log("Screen Update"):
         update(210, 210, 310, 310, WaveformMode.Mono, marker)
         marker += 1
+
+    with performance_log("Draw text"):
+        draw_text(800, 800, 100, 100, "Hello World!")
+
+    with performance_log("Screen Update"):
+        update(800, 800, 100, 100, WaveformMode.HighQualityGrayscale, marker)
+        marker += 1
+
+with performance_log("Save framebuffer"):
+    to_image().save("/home/root/py.fb.png")
 
 close_mmap_framebuffer()
 

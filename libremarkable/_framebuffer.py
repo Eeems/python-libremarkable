@@ -1,6 +1,8 @@
 import os
 import sys
 
+from io import BytesIO
+
 from mmap import mmap
 from mmap import MAP_SHARED
 from mmap import MAP_POPULATE
@@ -12,7 +14,14 @@ from ctypes import sizeof
 
 from contextlib import contextmanager
 
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from PIL import ImageColor
+
 from ._color import c_t
+from ._color import rgb888_to_rgb565
+from ._color import rgb565_to_rgb888
 
 from ._device import DeviceType
 from ._device import current
@@ -180,11 +189,23 @@ def set_pixel(x: int, y: int, color: c_t) -> None:
     _ensure_fb()["data"][get_offset(x, y)] = color
 
 
+def get_pixel(x: int, y: int) -> int:
+    return _ensure_fb()["data"][get_offset(x, y)]
+
+
+def _set_line_to_data(x: int, y: int, width: int, data) -> None:
+    _ensure_fb()["data"][get_offset(x, y) : get_offset(x + width, y)] = data
+
+
 def set_row(x: int, y: int, width: int, color: c_t) -> None:
     assert width > 0
     assert x + width <= framebuffer_width()
     data = (c_t * width).from_buffer(bytearray(color) * width)
-    _ensure_fb()["data"][get_offset(x, y) : get_offset(x + width, y)] = data
+    _set_line_to_data(x, y, width, data)
+
+
+def get_row(x: int, y: int, width: int) -> tuple[int]:
+    return _ensure_fb()["data"][get_offset(x, y) : get_offset(x + width, y)]
 
 
 def set_col(x: int, y: int, height: int, color: c_t) -> None:
@@ -195,7 +216,6 @@ def set_col(x: int, y: int, height: int, color: c_t) -> None:
 
 
 def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
-    print(f"{left},{top} {width}x{height}")
     for y in range(top, top + height):
         set_row(left, y, width, color)
 
@@ -213,3 +233,65 @@ def draw_rect(
     set_rect(left, bottom - lineSize, right - left, lineSize, color)  # Bottom line
     set_rect(left, top, lineSize, bottom - top, color)  # Left line
     set_rect(right - lineSize, top, lineSize, bottom - top, color)  # Right line
+
+
+def draw_image(left: int, top: int, image: Image) -> None:
+    # TODO - explore if Image.split and Image.point would result in
+    #        faster conversion of values, and the resulting integers
+    #        can just be compacted into the two bytes needed for rgb565
+    width = image.width
+    for y in range(0, image.height):
+        data = (c_t * width)()
+        for x in range(0, image.width):
+            p = image.getpixel((x, y))
+            data[x] = rgb888_to_rgb565(*p)
+
+        _set_line_to_data(left, top + y, width, data)
+
+
+def draw_text(
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    text: str,
+    color: str = "black",
+    backgroundColor: str = "white",
+    fontSize: int = 16,
+):
+    image = Image.new(
+        "RGB",
+        (width, height),
+        ImageColor.getrgb(backgroundColor),
+    )
+    ImageDraw.Draw(image).text(
+        (0, 0),
+        text,
+        ImageColor.getrgb(color),
+        font=ImageFont.load_default(size=fontSize),
+    )
+    draw_image(left, top, image)
+
+
+def to_image(
+    left: int = 0, top: int = 0, width: int = None, height: int = None
+) -> Image:
+    if width is None:
+        width = framebuffer_width()
+
+    if height is None:
+        height = framebuffer_height()
+
+    assert 0 <= left < framebuffer_width(), f"left of {left} is invalid"
+    assert 0 <= top < framebuffer_height(), f"top of {top} is invalid"
+    assert 0 < width <= framebuffer_width() - left, f"width of {width} is invalid"
+    assert 0 < height <= framebuffer_height() - top, f"height of {height} is invalid"
+
+    image = Image.new("RGB", (width, height))
+    data = image.load()
+    for y in range(top, top + height):
+        row = [rgb565_to_rgb888(x) for x in get_row(left, y, width)]
+        for x in range(0, width):
+            data[x, y] = row[x]
+
+    return image
