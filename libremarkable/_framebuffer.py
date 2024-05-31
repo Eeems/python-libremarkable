@@ -1,5 +1,4 @@
 import os
-import sys
 
 from mmap import mmap
 from mmap import MAP_SHARED
@@ -19,8 +18,6 @@ from PIL import ImageColor
 
 from ._color import c_t
 from ._color import get_rgb565
-from ._color import rgb888_to_rgb565
-from ._color import rgb565_to_rgb888
 from ._color import _rgb8_to_5_lut
 from ._color import _rgb8_to_6_lut
 from ._color import _rgb5_to_8_lut
@@ -39,7 +36,6 @@ from ._mxcfb import pixel_size as mxcfb_pixel_size
 from ._mxcfb import stride as mxcfb_stride
 from ._mxcfb import UPDATE_MODE_PARTIAL
 from ._mxcfb import UPDATE_MODE_FULL
-from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
 
 from ._rm2fb import send as rm2fb_update
 from ._rm2fb import wait as rm2fb_wait
@@ -48,7 +44,6 @@ from ._rm2fb import height as rm2fb_height
 from ._rm2fb import pixel_size as rm2fb_pixel_size
 from ._rm2fb import stride as rm2fb_stride
 from ._rm2fb import mxcfb_update_data
-from ._rm2fb import wait_sem_data
 
 
 # As these may change at runtime, they are methods instead of stored at startup

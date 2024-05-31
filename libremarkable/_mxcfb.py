@@ -1,5 +1,3 @@
-import struct
-
 from ctypes import byref
 from ctypes import c_char
 from ctypes import c_int

@@ -1,5 +1,4 @@
 import os
-import errno
 import time
 
 from ctypes import byref
@@ -19,7 +18,6 @@ from enum import IntEnum
 from typing import overload
 
 from ._mxcfb import mxcfb_update_data
-from ._mxcfb import Waveform
 from ._libc import msgsnd
 from ._libc import msgget
 
@@ -85,18 +83,15 @@ if msqid < 0:
 
 
 @overload
-def send(data: wait_sem_data) -> None:
-    ...
+def send(data: wait_sem_data) -> None: ...
 
 
 @overload
-def send(data: xochitl_data) -> None:
-    ...
+def send(data: xochitl_data) -> None: ...
 
 
 @overload
-def send(data: mxcfb_update_data) -> None:
-    ...
+def send(data: mxcfb_update_data) -> None: ...
 
 
 def send(data):

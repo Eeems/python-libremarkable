@@ -45,14 +45,33 @@ python -m nuitka \
 endef
 export EXECUTABLE_SCRIPT
 
-dist/libremarkable-${VERSION}.tar.gz: $(shell find libremarkable -type f) pyproject.toml
+
+ifeq ($(VENV_BIN_ACTIVATE),)
+VENV_BIN_ACTIVATE := .venv/bin/activate
+endif
+
+$(VENV_BIN_ACTIVATE):
+	python -m venv .venv
+	. $(VENV_BIN_ACTIVATE); \
+	python -m pip install \
+	    --extra-index-url=https://wheels.eeems.codes/ \
+	    ruff \
+	    build
+
+dist/libremarkable-${VERSION}.tar.gz: $(VENV_BIN_ACTIVATE) $(shell find libremarkable -type f) pyproject.toml
+	. $(VENV_BIN_ACTIVATE); \
 	python -m build --sdist
 
-dist/libremarkable-${VERSION}-py3-none-any.whl: $(shell find libremarkable -type f) pyproject.toml
+dist/libremarkable-${VERSION}-py3-none-any.whl: $(VENV_BIN_ACTIVATE)  $(shell find libremarkable -type f) pyproject.toml
+	. $(VENV_BIN_ACTIVATE); \
 	python -m build --wheel
 
 clean:
 	git clean --force -dX
+
+wheel: dist/libremarkable-${VERSION}-py3-none-any.whl
+
+srcdist: dist/libremarkable-${VERSION}.tar.gz
 
 deploy: dist/libremarkable-${VERSION}-py3-none-any.whl
 	rsync dist/libremarkable-${VERSION}-py3-none-any.whl root@10.11.99.1:/tmp
@@ -80,5 +99,21 @@ deploy-executable: dist/test.bin
 test-executable: deploy-executable
 	ssh root@10.11.99.1 /tmp/test.bin
 
+lint: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff check
 
-.PHONY: clean install test deploy test-executable deploy-executable
+lint-fix: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff check
+
+format: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff format --check
+
+format-fix: $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python -m ruff format --check
+
+
+.PHONY: clean install test deploy test-executable deploy-executable lint format _ruff wheel srcdist

@@ -20,10 +20,10 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - name: Install build tool
-        run: pip install build
+      - name: Lint
+        run: make lint
       - name: Building package
-        run: python -m build
+        run: make srcdist wheel
       - uses: actions/upload-artifact@v4
         with:
           name: pip

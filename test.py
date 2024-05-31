@@ -7,8 +7,6 @@
 import sys
 import time
 
-from io import SEEK_END
-
 from ctypes import sizeof
 
 from contextlib import contextmanager
@@ -17,7 +15,6 @@ from PIL import Image
 from PIL import ImageColor
 
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
-from libremarkable._framebuffer import mmap_framebuffer
 from libremarkable._framebuffer import close_mmap_framebuffer
 from libremarkable._framebuffer import framebuffer_path
 from libremarkable._framebuffer import framebuffer_size
@@ -28,8 +25,6 @@ from libremarkable._framebuffer import framebuffer_pixel_size
 from libremarkable._framebuffer import update
 from libremarkable._framebuffer import update_full
 from libremarkable._framebuffer import set_pixel
-from libremarkable._framebuffer import set_row
-from libremarkable._framebuffer import set_col
 from libremarkable._framebuffer import set_rect
 from libremarkable._framebuffer import set_color
 from libremarkable._framebuffer import draw_rect
@@ -40,7 +35,6 @@ from libremarkable._framebuffer import use_rm2fb
 from libremarkable._framebuffer import get_offset
 from libremarkable._framebuffer import to_image
 from libremarkable._framebuffer import get_pixel
-from libremarkable._framebuffer import get_row
 from libremarkable._color import WHITE
 from libremarkable._color import BLACK
 from libremarkable._color import c_t

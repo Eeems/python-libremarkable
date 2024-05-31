@@ -1,5 +1,3 @@
-import os
-
 from enum import auto
 from enum import Enum
 
