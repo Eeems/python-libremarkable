@@ -1,7 +1,7 @@
 [![libremarkable on PyPI](https://img.shields.io/pypi/v/libremarkable)](https://pypi.org/project/libremarkable)
 
-Python wrapper around the oxide command line tools
-==================================================
+Python Library for Developing Applications for the reMarkable Tablet
+====================================================================
 
 Installation
 ============
