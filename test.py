@@ -141,7 +141,10 @@ with performance_log("Total"):
         update(800, 800, 100, 100, WaveformMode.HighQualityGrayscale, marker)
         marker += 1
 
-with performance_log("Save framebuffer"):
+with performance_log("Save text from framebuffer"):
+    to_image(800, 800, 100, 100).save("/home/root/py.text.png")
+
+with performance_log("Save entire framebuffer"):
     to_image().save("/home/root/py.fb.png")
 
 close_mmap_framebuffer()

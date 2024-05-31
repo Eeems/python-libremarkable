@@ -289,8 +289,8 @@ def to_image(
 
     image = Image.new("RGB", (width, height))
     data = image.load()
-    for y in range(top, top + height):
-        row = [rgb565_to_rgb888(x) for x in get_row(left, y, width)]
+    for y in range(0, height):
+        row = [rgb565_to_rgb888(x) for x in get_row(left, y + top, width)]
         for x in range(0, width):
             data[x, y] = row[x]
 
