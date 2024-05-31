@@ -238,7 +238,7 @@ def draw_image(left: int, top: int, image: Image) -> None:
     height = image.height
 
     assert 0 <= left < framebuffer_width(), f"left of {left} is invalid"
-    assert 0 <= top < framebuffer_height(), f"right of {right} is invalid"
+    assert 0 <= top < framebuffer_height(), f"top of {top} is invalid"
     assert 0 < width <= framebuffer_width(), f"width of {width} is invalid"
     assert 0 < height <= framebuffer_height(), f"height of {height} is invalid"
 
