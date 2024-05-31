@@ -73,12 +73,17 @@ def asserti(name, value, expected):
     print(f"  {type(value).__name__} not instance of {expected.__name__}")
 
 
+assertv("WHITE", WHITE.value, 0xFFFF)
+assertv("BLACK", BLACK.value, 0x0000)
+color888 = ImageColor.getrgb("white")
+assertv("rgb565_to_rgb888(white)", rgb565_to_rgb888(0xFFFF), color888)
+assertv("rgb888_to_rgb565(white)", rgb888_to_rgb565(*color888), 0xFFFF)
+color888 = ImageColor.getrgb("black")
+assertv("rgb565_to_rgb888(black)", rgb565_to_rgb888(0x0000), color888)
+assertv("rgb888_to_rgb565(black)", rgb888_to_rgb565(*color888), 0x0000)
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
 assertv("pixel_size", framebuffer_pixel_size(), sizeof(c_t))
 assertv("get_offset", get_offset(0, 0), 0)
-white = ImageColor.getrgb("white")
-assertv("rgb565_to_rgb888", rgb565_to_rgb888(WHITE.value), white)
-assertv("rgb888_to_rgb565", rgb888_to_rgb565(*white), WHITE.value)
 asserti("get_pixel", get_pixel(0, 0), int)
 
 print(f"Device Type: {deviceType}")
