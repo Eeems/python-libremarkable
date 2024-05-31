@@ -302,13 +302,11 @@ def to_image(
 
     # Load data with rgb565 values
     image = Image.new("RGB", (width, height))
+    data = []
     for y in range(0, height):
-        image.putdata(
-            [get_rgb565(x) for x in get_row(left, y + top, width)],
-            offset=y * width,
-        )
+        data += [get_rgb565(x) for x in get_row(left, y + top, width)]
 
-    pixels = image.load()
+    image.putdata(data)
     # Split out red green and blue channels to work with
     r, g, b = image.split()
     # Convert image with rgb888 to rgb565 LUT

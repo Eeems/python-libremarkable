@@ -144,10 +144,12 @@ with performance_log("Total"):
         marker += 1
 
 with performance_log("Save text from framebuffer"):
-    to_image(800, 800, 100, 100).save("/home/root/py.text.png")
+    image = to_image(800, 800, 100, 100)
+    image.save("/home/root/py.text.png")
 
 with performance_log("Save entire framebuffer"):
-    to_image().save("/home/root/py.fb.png")
+    image = to_image()
+    image.save("/home/root/py.fb.png")
 
 image = Image.open("/home/root/py.fb.png")
 with performance_log("Replace framebuffer with contents of image"):
