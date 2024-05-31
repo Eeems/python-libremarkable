@@ -1,8 +1,6 @@
 import os
 import sys
 
-from io import BytesIO
-
 from mmap import mmap
 from mmap import MAP_SHARED
 from mmap import MAP_POPULATE
