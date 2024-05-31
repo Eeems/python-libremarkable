@@ -300,10 +300,10 @@ def to_image(
     assert 0 < height <= framebuffer_height() - top, f"height of {height} is invalid"
 
     image = Image.new("RGB", (width, height))
-    data = image.load()
     for y in range(0, height):
-        row = [rgb565_to_rgb888(x) for x in get_row(left, y + top, width)]
-        for x in range(0, width):
-            data[x, y] = row[x]
+        image.putdata(
+            [rgb565_to_rgb888(x) for x in get_row(left, y + top, width)],
+            offset=y * width,
+        )
 
     return image
