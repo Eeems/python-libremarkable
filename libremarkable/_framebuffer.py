@@ -12,16 +12,11 @@ from ctypes import sizeof
 from contextlib import contextmanager
 
 from PIL import Image
+from PIL import ImageColor
 from PIL import ImageDraw
 from PIL import ImageFont
-from PIL import ImageColor
 
 from ._color import c_t
-from ._color import get_rgb565
-from ._color import _rgb8_to_5_lut
-from ._color import _rgb8_to_6_lut
-from ._color import _rgb5_to_8_lut
-from ._color import _rgb6_to_8_lut
 
 from ._device import DeviceType
 from ._device import current
@@ -108,6 +103,9 @@ def mmap_framebuffer():
             "f": f,
             "mm": mm,
             "data": (c_t * int(size / sizeof(c_t))).from_buffer(mm),
+            "image": Image.frombuffer(
+                "I;16", (framebuffer_width(), framebuffer_height()), mm
+            ),
         }
 
     yield _fb["data"]
@@ -116,6 +114,7 @@ def mmap_framebuffer():
 def close_mmap_framebuffer():
     global _fb
     if _fb is not None:
+        _fb["image"].close()
         del _fb["data"]
         _fb["data"] = None
         _fb["mm"].close()
@@ -191,7 +190,9 @@ def get_pixel(x: int, y: int) -> int:
     return _ensure_fb()["data"][get_offset(x, y)]
 
 
-def _set_line_to_data(x: int, y: int, width: int, data) -> None:
+def _set_line_to_data(x: int, y: int, data) -> None:
+    width = len(data)
+    assert x + width <= framebuffer_width()
     _ensure_fb()["data"][get_offset(x, y) : get_offset(x + width, y)] = data
 
 
@@ -199,7 +200,7 @@ def set_row(x: int, y: int, width: int, color: c_t) -> None:
     assert width > 0
     assert x + width <= framebuffer_width()
     data = (c_t * width).from_buffer(bytearray(color) * width)
-    _set_line_to_data(x, y, width, data)
+    _set_line_to_data(x, y, data)
 
 
 def get_row(x: int, y: int, width: int) -> tuple[int]:
@@ -242,19 +243,12 @@ def draw_image(left: int, top: int, image: Image) -> None:
     assert 0 < width <= framebuffer_width(), f"width of {width} is invalid"
     assert 0 < height <= framebuffer_height(), f"height of {height} is invalid"
 
-    # Split out red green and blue channels to work on
-    r, g, b = image.split()
-    # Convert image with rgb565 to rgb888 LUT
-    rp = r.point(_rgb8_to_5_lut).load()
-    gp = g.point(_rgb8_to_6_lut).load()
-    bp = b.point(_rgb8_to_5_lut).load()
-    for y in range(0, image.height):
-        data = (c_t * width)()
-        for x in range(0, image.width):
-            # Merge converted red green and blue pixels into two bytes
-            data[x] = rp[x, y] << 11 | gp[x, y] << 5 | bp[x, y]
+    if image.mode != "I;16":
+        image = image.convert("I;16")
 
-        _set_line_to_data(left, top + y, width, data)
+    data = (c_t * (image.width * image.height)).from_buffer_copy(image.tobytes())
+    for y in range(0, image.height):
+        _set_line_to_data(left, top + y, data[y * width : y * width + width])
 
 
 def draw_text(
@@ -264,18 +258,13 @@ def draw_text(
     height: int,
     text: str,
     color: str = "black",
-    backgroundColor: str = "white",
     fontSize: int = 16,
 ):
-    image = Image.new(
-        "RGB",
-        (width, height),
-        ImageColor.getrgb(backgroundColor),
-    )
+    image = to_image(left, top, width, height)
     ImageDraw.Draw(image).text(
         (0, 0),
         text,
-        ImageColor.getrgb(color),
+        ImageColor.getcolor(color, image.mode),
         font=ImageFont.load_default(size=fontSize),
     )
     draw_image(left, top, image)
@@ -295,18 +284,4 @@ def to_image(
     assert 0 < width <= framebuffer_width() - left, f"width of {width} is invalid"
     assert 0 < height <= framebuffer_height() - top, f"height of {height} is invalid"
 
-    # Load data with rgb565 values
-    image = Image.new("RGB", (width, height))
-    data = []
-    for y in range(0, height):
-        data += [get_rgb565(x) for x in get_row(left, y + top, width)]
-
-    image.putdata(data)
-    # Split out red green and blue channels to work with
-    r, g, b = image.split()
-    # Convert image with rgb888 to rgb565 LUT
-    r = r.point(_rgb5_to_8_lut)
-    g = g.point(_rgb6_to_8_lut)
-    b = b.point(_rgb5_to_8_lut)
-    # Merge back into rgb image
-    return Image.merge("RGB", (r, g, b))
+    return _ensure_fb()["image"].crop((left, top, left + width, top + height))
