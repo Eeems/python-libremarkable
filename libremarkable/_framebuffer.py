@@ -32,6 +32,8 @@ from ._mxcfb import stride as mxcfb_stride
 from ._mxcfb import UPDATE_MODE_PARTIAL
 from ._mxcfb import UPDATE_MODE_FULL
 
+# from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
+
 from ._rm2fb import send as rm2fb_update
 from ._rm2fb import wait as rm2fb_wait
 from ._rm2fb import width as rm2fb_width

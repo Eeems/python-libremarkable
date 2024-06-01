@@ -3,21 +3,48 @@ PATH := "/opt/bin:/opt/sbin:/home/root/.local/bin:/opt/bin:/opt/sbin:/usr/local/
 
 define INSTALL_SCRIPT
 export PATH=${PATH}
+if ! type opkg &> /dev/null; then
+    echo "Opkg not found, please install toltec"
+    exit 1
+fi
 if ! type pip &> /dev/null; then
-    if ! type opkg &> /dev/null; then
-        echo "Opkg not found, please install toltec"
-        exit 1
-    fi
     opkg update
     opkg install python3-pip
 fi
 if ! python -c 'import PIL' &> /dev/null; then
-    if ! type opkg &> /dev/null; then
-        echo "Opkg not found, please install toltec"
-        exit 1
-    fi
     opkg update
     opkg install python3-pillow
+fi
+if ! python -c 'import evdev' &> /dev/null; then
+    pip install wheel
+    opkg update
+    opkg install gcc python3-dev binutils busybox gawk ldd make sed tar
+    /opt/bin/busybox wget -qO- "$(/opt/bin/busybox sed -Ene \
+      's|^src/gz[[:space:]]entware[[:space:]]https?([[:graph:]]+)|http\1/include/include.tar.gz|p' \
+      /opt/etc/opkg.conf)" | /opt/bin/busybox tar x -vzC /opt/include
+    cd /tmp
+    pip download evdev
+    tar -xf evdev-*.tar.gz
+    cd evdev-*/
+    python -u <<EOF
+import os
+with open('evdev/genecodes.py', 'r') as f:
+    lines = f.readlines()
+
+if "#include <linux/input-event-codes.h>\n" not in lines:
+    lines.insert(lines.index("#include <Python.h>\n"), "#include <linux/input-event-codes.h>\n")
+
+with open('evdev/genecodes.py', 'w') as f:
+    f.writelines(lines)
+EOF
+    C_INCLUDE_PATH=/opt/include \
+    python setup.py \
+        build_ecodes \
+        --evdev-headers /opt/include/linux/input.h:/opt/include/linux/input-event-codes.h \
+        bdist_wheel
+    pip install dist/evdev-*.whl
+    cd /tmp
+    rm -rf evdev-*
 fi
 pip uninstall -qy libremarkable
 pip install \
