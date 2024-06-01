@@ -145,7 +145,7 @@ with performance_log("Save entire framebuffer"):
     image = to_image()
     image.save("/tmp/py.fb.png")
 
-image = Image.open("/home/root/py.fb.png")
+image = Image.open("/tmp/py.fb.png")
 with performance_log("Replace framebuffer with contents of image"):
     draw_image(0, 0, image)
 

@@ -40,6 +40,8 @@ from ._rm2fb import pixel_size as rm2fb_pixel_size
 from ._rm2fb import stride as rm2fb_stride
 from ._rm2fb import mxcfb_update_data
 
+IMAGE_MODE = "I;16"
+
 
 # As these may change at runtime, they are methods instead of stored at startup
 def use_rm2fb() -> bool:
@@ -104,7 +106,7 @@ def mmap_framebuffer():
             "mm": mm,
             "data": (c_t * int(size / sizeof(c_t))).from_buffer(mm),
             "image": Image.frombuffer(
-                "I;16", (framebuffer_width(), framebuffer_height()), mm
+                IMAGE_MODE, (framebuffer_width(), framebuffer_height()), mm
             ),
         }
 
@@ -215,8 +217,9 @@ def set_col(x: int, y: int, height: int, color: c_t) -> None:
 
 
 def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
+    data = (c_t * width).from_buffer(bytearray(color) * width)
     for y in range(top, top + height):
-        set_row(left, y, width, color)
+        _set_line_to_data(left, y, data)
 
 
 def set_color(color: c_t) -> None:
@@ -243,8 +246,8 @@ def draw_image(left: int, top: int, image: Image) -> None:
     assert 0 < width <= framebuffer_width(), f"width of {width} is invalid"
     assert 0 < height <= framebuffer_height(), f"height of {height} is invalid"
 
-    if image.mode != "I;16":
-        image = image.convert("I;16")
+    if image.mode != IMAGE_MODE:
+        image = image.convert(IMAGE_MODE)
 
     data = (c_t * (image.width * image.height)).from_buffer_copy(image.tobytes())
     for y in range(0, image.height):
@@ -262,6 +265,26 @@ def draw_text(
 ):
     image = to_image(left, top, width, height)
     ImageDraw.Draw(image).text(
+        (0, 0),
+        text,
+        ImageColor.getcolor(color, image.mode),
+        font=ImageFont.load_default(size=fontSize),
+    )
+    draw_image(left, top, image)
+
+
+def draw_multiline_text(
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    text: str,
+    color: str = "black",
+    fontSize: int = 16,
+    align: str = "left",
+):
+    image = to_image(left, top, width, height)
+    ImageDraw.Draw(image).multiline_text(
         (0, 0),
         text,
         ImageColor.getcolor(color, image.mode),

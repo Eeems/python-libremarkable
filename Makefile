@@ -26,12 +26,24 @@ pip install \
 endef
 export INSTALL_SCRIPT
 define EXECUTABLE_SCRIPT
+echo "[info] Installing dependencies"
+export DEBIAN_FRONTEND="noninteractive"
+apt-get -y update
+apt-get install -y \
+  libtiff5 \
+  libjpeg62-turbo \
+  libopenjp2-7 \
+  zlib1g \
+  libfreetype6 \
+  tcl8.6 \
+  tk8.6 \
+  python3-tk \
+  libxcb1
 cd /src
 source /opt/lib/nuitka/bin/activate
-echo "[info] Installing dependencies"
+python -m pip install wheel
 python -m pip install \
 	--extra-index-url=https://wheels.eeems.codes/ \
-	wheel \
 	nuitka \
 	-r requirements.txt
 echo "[info] Building"
@@ -44,6 +56,32 @@ python -m nuitka \
     test.py
 endef
 export EXECUTABLE_SCRIPT
+define TAR_SCRIPT
+echo "[info] Installing dependencies"
+export DEBIAN_FRONTEND="noninteractive"
+apt-get -y update
+apt-get install -y \
+  libtiff5 \
+  libjpeg62-turbo \
+  libopenjp2-7 \
+  zlib1g \
+  libfreetype6 \
+  tcl8.6 \
+  tk8.6 \
+  python3-tk \
+  libxcb1
+cd /usr/lib/arm-linux-gnueabihf
+tar -czf /src/dist/test.tar.gz \
+  libopenjp2.so.* \
+  libxcb.so.* \
+  libXau.so.* \
+  libXdmcp.so.* \
+  libbsd.so.* \
+  libmd.so.* \
+  -C /src/dist \
+  test.bin
+endef
+export TAR_SCRIPT
 
 
 ifeq ($(VENV_BIN_ACTIVATE),)
@@ -84,8 +122,8 @@ test: install
 	| ssh root@10.11.99.1 \
 	  "bash -ec 'PATH=${PATH} /opt/bin/python -u'"
 
-dist/test.bin: $(shell find libremarkable -type f)
-	docker run --privileged --rm tonistiigi/binfmt --install all
+dist/test.bin: $(shell find libremarkable -type f) test.py
+	docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
 	docker run \
 	  --rm \
 	  --platform=linux/arm/v7 \
@@ -93,11 +131,22 @@ dist/test.bin: $(shell find libremarkable -type f)
 	  eeems/nuitka-arm-builder:bullseye-3.11 \
 	  bash -ec "$$EXECUTABLE_SCRIPT"
 
-deploy-executable: dist/test.bin
-	rsync dist/test.bin root@10.11.99.1:/tmp
+dist/test.tar.gz: dist/test.bin
+	docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
+	docker run \
+	  --rm \
+	  --platform=linux/arm/v7 \
+	  -v "$$(pwd)":/src \
+	  eeems/nuitka-arm-builder:bullseye-3.11 \
+	  bash -ec "$$TAR_SCRIPT"
+
+deploy-executable: dist/test.tar.gz
+	ssh root@10.11.99.1 "mkdir -p /tmp/test"
+	rsync dist/test.tar.gz root@10.11.99.1:/tmp
+	ssh root@10.11.99.1 "tar -C /tmp/test -zxf /tmp/test.tar.gz"
 
 test-executable: deploy-executable
-	ssh root@10.11.99.1 /tmp/test.bin
+	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/test /tmp/test/test.bin"
 
 lint: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
