@@ -18,10 +18,12 @@ fi
 if ! python -c 'import evdev' &> /dev/null; then
     pip install wheel
     opkg update
-    opkg install gcc python3-dev binutils busybox gawk ldd make sed tar
-    /opt/bin/busybox wget -qO- "$(/opt/bin/busybox sed -Ene \
-      's|^src/gz[[:space:]]entware[[:space:]]https?([[:graph:]]+)|http\1/include/include.tar.gz|p' \
-      /opt/etc/opkg.conf)" | /opt/bin/busybox tar x -vzC /opt/include
+    opkg install gcc python3-dev binutils busybox gawk ldd make sed tar python3-setuptools
+    if ! [ -f /opt/include/linux/input.h ]; then
+        /opt/bin/busybox wget -qO- "$$(/opt/bin/busybox sed -Ene \
+          's|^src/gz[[:space:]]entware[[:space:]]https?([[:graph:]]+)|http\1/include/include.tar.gz|p' \
+          /opt/etc/opkg.conf)" | /opt/bin/busybox tar x -vzC /opt/include
+    fi
     cd /tmp
     pip download evdev
     tar -xf evdev-*.tar.gz
@@ -31,8 +33,8 @@ import os
 with open('evdev/genecodes.py', 'r') as f:
     lines = f.readlines()
 
-if "#include <linux/input-event-codes.h>\n" not in lines:
-    lines.insert(lines.index("#include <Python.h>\n"), "#include <linux/input-event-codes.h>\n")
+if "#include <linux/input-event-codes.h>\\n" not in lines:
+    lines.insert(lines.index("#include <Python.h>\\n"), "#include <linux/input-event-codes.h>\\n")
 
 with open('evdev/genecodes.py', 'w') as f:
     f.writelines(lines)
@@ -139,6 +141,8 @@ wheel: dist/libremarkable-${VERSION}-py3-none-any.whl
 srcdist: dist/libremarkable-${VERSION}.tar.gz
 
 deploy: dist/libremarkable-${VERSION}-py3-none-any.whl
+	ssh root@10.11.99.1 mkdir -p /opt/include/linux
+	rsync vendor/input-event-codes.h root@10.11.99.1:/opt/include/linux/
 	rsync dist/libremarkable-${VERSION}-py3-none-any.whl root@10.11.99.1:/tmp
 
 install: deploy
