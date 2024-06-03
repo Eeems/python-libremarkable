@@ -226,9 +226,7 @@ def get_pixel(x: int, y: int) -> int:
 
 
 def _set_line_to_data(x: int, y: int, data) -> None:
-    width = len(data)
-    assert x + width <= framebuffer_width()
-    _ensure_fb()["data"][get_offset(x, y) : get_offset(x + width, y)] = data
+    _ensure_fb()["data"][get_offset(x, y) : get_offset(x + len(data), y)] = data
 
 
 def set_row(x: int, y: int, width: int, color: c_t) -> None:
