@@ -161,20 +161,8 @@ for event in Input.events(block=True):
         continue
 
     x, y = event.screenPos
-    w = h = 3
-    if not x:
-        w = 2
-    elif x + 3 >= framebuffer_width():
-        w = 1
-
-    if not y:
-        h = 2
-    elif y + 3 >= framebuffer_height():
-        h = 1
-
-    set_rect(x, y, w, h, BLACK)
-    update(x, y, w, h, WaveformMode.Mono)
-    print(event)
+    set_pixel(x, y, BLACK)
+    update(x, y, 1, 1, WaveformMode.Mono)
 
 close_mmap_framebuffer()
 

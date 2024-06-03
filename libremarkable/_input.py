@@ -38,10 +38,10 @@ from ._device import current as deviceType
 
 
 def _rotate(
-    center: tuple[int, int], point: tuple[int, int], angle: int
+    *points: tuple[int, int], center: tuple[int, int], angle: int
 ) -> tuple[int, int]:
-    assert 0 <= angle <= 360
     cx, cy = center
+    angle = angle % 360
     ang_rad = math.radians(angle)
     cos_ang, sin_ang = (
         (0, 1)
@@ -52,8 +52,11 @@ def _rotate(
         if angle == 270
         else (math.cos(ang_rad), math.sin(ang_rad))
     )
-    x, y = point[0] - cx, point[1] - cy
-    return int(cx + cos_ang * x - sin_ang * y), int(cy + sin_ang * x + cos_ang * y)
+    ret = tuple(
+        (cx + cos_ang * dx - sin_ang * dy, cy + sin_ang * dx + cos_ang * dy)
+        for dx, dy in ((x - cx, y - cy) for x, y in points)
+    )
+    return ret if len(ret) > 1 else ret[0]
 
 
 class Event:
@@ -135,8 +138,8 @@ class WacomEvent(Event):
     @property
     def screenPos(self) -> tuple[int, int] | None:
         x, y = self.x, self.y
-        if deviceType == DeviceType.RM2:
-            x, y = 1 - x, y  # _rotate((1 - x, y), (0.5, 0.5), -180)
+        if deviceType in (DeviceType.RM1, DeviceType.RM2):
+            x, y = _rotate((x, y), center=(0.5, 0.5), angle=270)
 
         maxX, maxY = framebuffer_width() - 1, framebuffer_height() - 1
         return int(x * maxX), int(y * maxY)
