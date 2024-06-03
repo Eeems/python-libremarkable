@@ -1,6 +1,9 @@
 VERSION := $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
 PATH := "/opt/bin:/opt/sbin:/home/root/.local/bin:/opt/bin:/opt/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
 
+EVDEV_VERSION := $(shell grep evdev requirements.txt)
+OBJ := $(shell find libremarkable -type f) pyproject.toml requirements.txt
+
 define INSTALL_SCRIPT
 export PATH=${PATH}
 if ! type opkg &> /dev/null; then
@@ -15,17 +18,37 @@ if ! python -c 'import PIL' &> /dev/null; then
     opkg update
     opkg install python3-pillow
 fi
-if ! python -c 'import evdev' &> /dev/null; then
+buildtools(){
     pip install wheel
     opkg update
-    opkg install gcc python3-dev binutils busybox gawk ldd make sed tar python3-setuptools
+    opkg install \
+        automake \
+        binutils \
+        busybox \
+        cmake \
+        gawk \
+        gcc \
+        icu \
+        ldd \
+        libintl-full \
+        libopenssl \
+        libtool-bin \
+        make \
+        patchelf \
+        python3-dev \
+        python3-setuptools \
+        sed \
+        tar
     if ! [ -f /opt/include/linux/input.h ]; then
         /opt/bin/busybox wget -qO- "$$(/opt/bin/busybox sed -Ene \
           's|^src/gz[[:space:]]entware[[:space:]]https?([[:graph:]]+)|http\1/include/include.tar.gz|p' \
           /opt/etc/opkg.conf)" | /opt/bin/busybox tar x -vzC /opt/include
     fi
+}
+if ! python -c 'import evdev' &> /dev/null; then
+    buildtools
     cd /tmp
-    pip download evdev
+    pip download --no-binary ':all:' "${EVDEV_VERSION}"
     tar -xf evdev-*.tar.gz
     cd evdev-*/
     python -u <<EOF
@@ -125,11 +148,11 @@ $(VENV_BIN_ACTIVATE):
 	    ruff \
 	    build
 
-dist/libremarkable-${VERSION}.tar.gz: $(VENV_BIN_ACTIVATE) $(shell find libremarkable -type f) pyproject.toml
+dist/libremarkable-${VERSION}.tar.gz: $(VENV_BIN_ACTIVATE) $(OBJ)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m build --sdist
 
-dist/libremarkable-${VERSION}-py3-none-any.whl: $(VENV_BIN_ACTIVATE)  $(shell find libremarkable -type f) pyproject.toml
+dist/libremarkable-${VERSION}-py3-none-any.whl: $(VENV_BIN_ACTIVATE)  $(OBJ)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m build --wheel
 
