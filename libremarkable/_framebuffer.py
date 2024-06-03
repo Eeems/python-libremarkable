@@ -261,9 +261,7 @@ def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
 
 
 def set_color(color: c_t) -> None:
-    data = _ensure_fb()["data"]
-    size = len(data)
-    data[0:size] = (c_t * size).from_buffer(bytearray(color) * size)
+    set_rect(0, 0, framebuffer_width(), framebuffer_height(), color)
 
 
 def draw_rect(
