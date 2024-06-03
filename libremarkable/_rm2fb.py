@@ -83,15 +83,18 @@ if msqid < 0:
 
 
 @overload
-def send(data: wait_sem_data) -> None: ...
+def send(data: wait_sem_data) -> None:
+    ...
 
 
 @overload
-def send(data: xochitl_data) -> None: ...
+def send(data: xochitl_data) -> None:
+    ...
 
 
 @overload
-def send(data: mxcfb_update_data) -> None: ...
+def send(data: mxcfb_update_data) -> None:
+    ...
 
 
 def send(data):
@@ -136,15 +139,23 @@ def send(data):
         raise NotImplementedError()
 
 
-def width():
+def width() -> int:
     return 1404
 
 
-stride = width
-
-
-def height():
+def height() -> int:
     return 1872
+
+
+virtual_width = width
+virtual_height = height
+
+
+def x_offset() -> int:
+    return 0
+
+
+y_offset = x_offset
 
 
 def pixel_size():

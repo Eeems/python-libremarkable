@@ -11,7 +11,7 @@ from ctypes import sizeof
 
 from contextlib import contextmanager
 
-from PIL import Image
+# from PIL import Image
 from PIL import ImageColor
 
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
@@ -20,7 +20,6 @@ from libremarkable._framebuffer import framebuffer_path
 from libremarkable._framebuffer import framebuffer_size
 from libremarkable._framebuffer import framebuffer_width
 from libremarkable._framebuffer import framebuffer_height
-from libremarkable._framebuffer import framebuffer_stride
 from libremarkable._framebuffer import framebuffer_pixel_size
 from libremarkable._framebuffer import update
 from libremarkable._framebuffer import update_full
@@ -29,20 +28,32 @@ from libremarkable._framebuffer import set_rect
 from libremarkable._framebuffer import set_color
 from libremarkable._framebuffer import draw_rect
 from libremarkable._framebuffer import draw_text
-from libremarkable._framebuffer import draw_image
 from libremarkable._framebuffer import WaveformMode
 from libremarkable._framebuffer import use_rm2fb
 from libremarkable._framebuffer import get_offset
 from libremarkable._framebuffer import to_image
 from libremarkable._framebuffer import get_pixel
+
+# from libremarkable._framebuffer import draw_image
 from libremarkable._color import WHITE
 from libremarkable._color import BLACK
 from libremarkable._color import c_t
 from libremarkable._color import rgb565_to_rgb888
 from libremarkable._color import rgb888_to_rgb565
 from libremarkable import deviceType
+from libremarkable import Input
+from libremarkable import WacomEvent
+from libremarkable import TouchEvent
 
 FAILED = False
+
+
+@contextmanager
+def performance_log(msg: str = ""):
+    start = time.perf_counter_ns()
+    yield
+    end = time.perf_counter_ns()
+    print(f"{msg}: {(end - start) / 1000000}ms")
 
 
 def assertv(name, value, expected):
@@ -85,18 +96,9 @@ asserti("get_pixel", get_pixel(0, 0), int)
 print(f"Device Type: {deviceType}")
 print(f"FrameBuffer path: {framebuffer_path()}")
 print(f"Size: {framebuffer_size()}")
-print(f"Stride: {framebuffer_stride()}")
 print(f"rm2fb: {use_rm2fb()}")
 print(f"Width: {framebuffer_width()}")
 print(f"Height: {framebuffer_height()}")
-
-
-@contextmanager
-def performance_log(msg: str = ""):
-    start = time.perf_counter_ns()
-    yield
-    end = time.perf_counter_ns()
-    print(f"{msg}: {(end - start) / 1000000}ms")
 
 
 marker = 1
@@ -145,11 +147,35 @@ with performance_log("Save entire framebuffer"):
     image = to_image()
     image.save("/tmp/py.fb.png")
 
-image = Image.open("/tmp/py.fb.png")
-with performance_log("Replace framebuffer with contents of image"):
-    draw_image(0, 0, image)
+# image = Image.open("/tmp/py.fb.png")
+# with performance_log("Replace framebuffer with contents of image"):
+#     draw_image(0, 0, image)
 
 update_full(WaveformMode.HighQualityGrayscale)
+
+for event in Input.events(block=True):
+    if not isinstance(event, WacomEvent) and not isinstance(event, TouchEvent):
+        continue
+
+    if isinstance(event, WacomEvent) and event.is_hover:
+        continue
+
+    x, y = event.screenPos
+    w = h = 3
+    if not x:
+        w = 2
+    elif x + 3 >= framebuffer_width():
+        w = 1
+
+    if not y:
+        h = 2
+    elif y + 3 >= framebuffer_height():
+        h = 1
+
+    set_rect(x, y, w, h, BLACK)
+    update(x, y, w, h, WaveformMode.Mono)
+    print(event)
+
 close_mmap_framebuffer()
 
 if FAILED:

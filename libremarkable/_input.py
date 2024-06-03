@@ -1,26 +1,173 @@
+import math
+
 from typing import Iterator
 
-from evdev import categorize
 from evdev import list_devices
 from evdev import InputDevice
 from evdev import InputEvent
-from evdev import SynEvent
 
 from evdev.ecodes import EV_ABS
 from evdev.ecodes import EV_KEY
 from evdev.ecodes import EV_SYN
+from evdev.ecodes import ABS_X
+from evdev.ecodes import ABS_Y
+from evdev.ecodes import ABS_TILT_X
+from evdev.ecodes import ABS_TILT_Y
+from evdev.ecodes import ABS_DISTANCE
 from evdev.ecodes import ABS_MT_TRACKING_ID
+from evdev.ecodes import ABS_MT_SLOT
+from evdev.ecodes import ABS_MT_POSITION_X
+from evdev.ecodes import ABS_MT_POSITION_Y
+from evdev.ecodes import ABS_MT_PRESSURE
+from evdev.ecodes import BTN_TOUCH
 from evdev.ecodes import BTN_STYLUS
+from evdev.ecodes import BTN_TOOL_PEN
 from evdev.ecodes import SYN_DROPPED
+from evdev.ecodes import SYN_REPORT
+from evdev.ecodes import SYN_MT_REPORT
 
 from selectors import DefaultSelector
 from selectors import EVENT_READ
 
 
+from ._framebuffer import framebuffer_width
+from ._framebuffer import framebuffer_height
+
+from ._device import DeviceType
+from ._device import current as deviceType
+
+
+def _rotate(
+    center: tuple[int, int], point: tuple[int, int], angle: int
+) -> tuple[int, int]:
+    assert 0 <= angle <= 360
+    cx, cy = center
+    ang_rad = math.radians(angle)
+    cos_ang, sin_ang = (
+        (0, 1)
+        if angle == 90
+        else (-1, 0)
+        if angle == 180
+        else (0, -1)
+        if angle == 270
+        else (math.cos(ang_rad), math.sin(ang_rad))
+    )
+    x, y = point[0] - cx, point[1] - cy
+    return int(cx + cos_ang * x - sin_ang * y), int(cy + sin_ang * x + cos_ang * y)
+
+
 class Event:
-    def __init__(self, device, events):
+    def __init__(self, device, state):
         self.device = device
-        self.rawEvents = events
+        self.rawEvents = state["events"]
+        self.previousData = state["previous"]
+        self.data = state["current"]
+
+    def __repr__(self):
+        return f"<InputEvent rawEvents={len(self.rawEvents)}>"
+
+    def _get_abs_range(self, code) -> tuple[int, int]:
+        info = self.device.absinfo(code)
+        return info.min, info.max
+
+    def _get_abs_float(self, type: int, code: int, default: int | None) -> float | None:
+        value = self.data.get((type, code), None)
+        if value is None:
+            return default
+
+        min, max = self._get_abs_range(code)
+        return (value - min) / (max - min)
+
+
+class TouchEvent(Event):
+    def __repr__(self):
+        return (
+            f"<TouchEvent {self.trackingId} slot={self.slot} position={self.x},{self.y} "
+            f"pressure={self.pressure} rawEvents={len(self.rawEvents)}>"
+        )
+
+    @property
+    def x(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_MT_POSITION_X, None)
+
+    @property
+    def y(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_MT_POSITION_Y, None)
+
+    @property
+    def screenPos(self) -> tuple[int, int] | None:
+        x, y = self.x, 1 - self.y
+        if deviceType == DeviceType.RM1:
+            x = 1 - x
+
+        maxX, maxY = framebuffer_width() - 1, framebuffer_height() - 1
+        return int(x * maxX), int(y * maxY)
+
+    @property
+    def pressure(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
+
+    @property
+    def slot(self) -> int:
+        return self.data.get((EV_ABS, ABS_MT_SLOT), 0)
+
+    @property
+    def trackingId(self) -> int | None:
+        return self.data.get((EV_ABS, ABS_MT_TRACKING_ID), None)
+
+
+class WacomEvent(Event):
+    def __repr__(self):
+        return (
+            f"<WacomEvent position={self.x},{self.y} distance={self.distance} pressure={self.pressure} "
+            f"tilt={self.tilt} {' hover ' if self.is_hover else ''}{' pressed ' if self.is_down else ''}"
+            f"rawEvents={len(self.rawEvents)}>"
+        )
+
+    @property
+    def x(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_X, None)
+
+    @property
+    def y(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_Y, None)
+
+    @property
+    def screenPos(self) -> tuple[int, int] | None:
+        x, y = self.x, self.y
+        if deviceType == DeviceType.RM2:
+            x, y = 1 - x, y  # _rotate((1 - x, y), (0.5, 0.5), -180)
+
+        maxX, maxY = framebuffer_width() - 1, framebuffer_height() - 1
+        return int(x * maxX), int(y * maxY)
+
+    @property
+    def distance(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_DISTANCE, None)
+
+    @property
+    def pressure(self) -> float | None:
+        return self._get_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
+
+    @property
+    def tilt(self) -> tuple[int, int]:
+        return (
+            self._get_abs_float(EV_ABS, ABS_TILT_X, 0),
+            self._get_abs_float(EV_ABS, ABS_TILT_Y, 0),
+        )
+
+    @property
+    def is_down(self) -> bool:
+        return bool(self.data.get((EV_KEY, BTN_TOUCH), 0))
+
+    @property
+    def is_hover(self) -> bool:
+        return not self.is_down and self.data.get((EV_KEY, BTN_TOOL_PEN), 0)
+
+
+def KeyEvent(Event):
+    def __repr__(self):
+        return "<KeyEvent rawEvents={len(self.rawEvents)}>"
 
 
 class Input:
@@ -53,9 +200,23 @@ class Input:
         ]
 
     @classmethod
+    def deviceType(cls, device: InputDevice) -> str:
+        if device in cls.keyDevices():
+            return "key"
+
+        if device in cls.wacomDevices():
+            return "wacom"
+
+        if device in cls.touchDevices():
+            return "touch"
+
+        # TODO - add mouse and other pointer device support
+        return "unknown"
+
+    @classmethod
     def rawEvents(
         cls, devices: list[InputDevice] = None, block: bool = False
-    ) -> Iterator[tuple[InputDevice, InputEvent] | tuple[None, None]]:
+    ) -> Iterator[tuple[InputDevice | None, list[InputEvent]]]:
         selector = DefaultSelector()
         if devices is None:
             devices = cls.devices()
@@ -71,21 +232,19 @@ class Input:
                     if device.path not in events.keys():
                         events[device.path] = []
 
+                    events[device.path].append(event)
                     if event.type != EV_SYN:
-                        events[device.path].append(event)
                         continue
 
                     if event.code == SYN_DROPPED:
                         events[device.path] = []
                         continue
 
-                    for e in events[device.path]:
-                        yield device, categorize(e)
-
-                    yield device, categorize(event)
+                    yield device, events[device.path]
                     events[device.path] = []
 
-            yield None, None
+            if not block:
+                yield None, []
 
     @classmethod
     def rawPositionEvents(
@@ -118,17 +277,40 @@ class Input:
     @classmethod
     def events(cls, block: bool = False) -> Event | None:
         states = {}
-        for d, e in cls.rawEvents(block=block):
-            if d is None:
-                yield None
+        for d, events in cls.rawEvents(block=block):
+            if d is None or not events:
+                if not block:
+                    yield None
+
                 continue
+
             if d.path not in states.keys():
-                states[d.path] = {"events": []}
+                states[d.path] = {
+                    "events": [],
+                    "type": cls.deviceType(d),
+                    "current": {},
+                    "previous": {},
+                }
 
             state = states[d.path]
-            if not isinstance(e, SynEvent):
-                state["events"].append(e)
-                continue
+            for e in events:
+                # TODO - handle touch slots
+                if e.type != EV_SYN or e.code not in (SYN_REPORT, SYN_MT_REPORT):
+                    state["events"].append(e)
+                    state["current"][(e.type, e.code)] = e.value
+                    continue
 
-            yield Event(d, state["events"])
-            state["events"] = []
+                if state["type"] == "touch":
+                    yield TouchEvent(d, state)
+
+                elif state["type"] == "wacom":
+                    yield WacomEvent(d, state)
+
+                elif state["type"] == "key":
+                    yield KeyEvent(d, state)
+
+                else:
+                    yield Event(d, state)
+
+                state["events"] = []
+                state["previous"] = state["current"]

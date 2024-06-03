@@ -1,4 +1,3 @@
-from ctypes import byref
 from ctypes import c_char
 from ctypes import c_int
 from ctypes import c_ushort
@@ -14,7 +13,7 @@ from ._ioctl import _IOW
 from ._ioctl import _IOWR
 from ._ioctl import _IOR
 
-from ._libc import ioctl
+from fcntl import ioctl
 
 FBIOGET_VSCREENINFO = 0x4600
 FBIOPUT_VSCREENINFO = 0x4601
@@ -291,7 +290,7 @@ class MXCFBException(Exception):
 def get_var_screeninfo() -> fb_var_screeninfo:
     with open(FB_PATH, "rb") as f:
         info = fb_var_screeninfo()
-        res = ioctl(f.fileno(), FBIOGET_VSCREENINFO, byref(info))
+        res = ioctl(f.fileno(), FBIOGET_VSCREENINFO, info)
         if res < 0:
             raise MXCFBException(res)
 
@@ -301,30 +300,24 @@ def get_var_screeninfo() -> fb_var_screeninfo:
 def get_fix_screeninfo() -> fb_fix_screeninfo:
     with open(FB_PATH, "rb") as f:
         info = fb_fix_screeninfo()
-        res = ioctl(f.fileno(), FBIOGET_FSCREENINFO, byref(info))
+        res = ioctl(f.fileno(), FBIOGET_FSCREENINFO, info)
         if res < 0:
             raise MXCFBException(res)
 
         return info
 
 
+def getsize() -> int:
+    return get_fix_screeninfo().smem_len
+
+
 _width = None
 _height = None
-_stride = None
+_v_width = None
+_v_height = None
+_x_offset = None
+_y_offset = None
 _pixel_width = None
-
-
-def getsize() -> int:
-    global _width
-    global _height
-    global _stride
-    global _pixel_width
-    vinfo = get_var_screeninfo()
-    _width = vinfo.xres
-    _height = vinfo.yres
-    _stride = vinfo.xres_virtual
-    _pixel_width = int(vinfo.bits_per_pixel / 8)
-    return int(_stride * _height * _pixel_width)
 
 
 def width() -> int:
@@ -335,20 +328,44 @@ def width() -> int:
     return _width
 
 
-def stride() -> int:
-    global _stride
-    if _stride is None:
-        _stride = get_var_screeninfo().xres_virtual
-
-    return _stride
-
-
 def height() -> int:
     global _height
     if _height is None:
         _height = get_var_screeninfo().yres
 
     return _height
+
+
+def virtual_width() -> int:
+    global _v_width
+    if _v_width is None:
+        _v_width = get_var_screeninfo().xres_virtual
+
+    return _v_width
+
+
+def virtual_height() -> int:
+    global _v_height
+    if _v_height is None:
+        _v_height = get_var_screeninfo().xres_virtual
+
+    return _v_height
+
+
+def x_offset() -> int:
+    global _x_offset
+    if _x_offset is None:
+        _x_offset = get_var_screeninfo().xoffset
+
+    return _x_offset
+
+
+def y_offset() -> int:
+    global _y_offset
+    if _y_offset is None:
+        _y_offset = get_var_screeninfo().yoffset
+
+    return _y_offset
 
 
 def pixel_size() -> int:
@@ -359,17 +376,21 @@ def pixel_size() -> int:
     return _pixel_width
 
 
+def _fileno():
+    from ._framebuffer import _ensure_fb
+
+    return _ensure_fb()["f"].fileno()
+
+
 def update(data: mxcfb_update_data) -> None:
-    with open(FB_PATH, "rb") as f:
-        res = ioctl(f.fileno(), MXCFB_SEND_UPDATE, byref(data))
-        if res < 0:
-            raise MXCFBException(res)
+    res = ioctl(_fileno(), MXCFB_SEND_UPDATE, data)
+    if res < 0:
+        raise MXCFBException(res)
 
 
 def wait(marker: int) -> None:
-    with open(FB_PATH, "rb") as f:
-        data = mxcfb_update_marker_data()
-        data.update_marker = marker
-        res = ioctl(f.fileno(), MXCFB_WAIT_FOR_UPDATE_COMPLETE, byref(data))
-        if res < 0:
-            raise MXCFBException(res)
+    data = mxcfb_update_marker_data()
+    data.update_marker = marker
+    res = ioctl(_fileno(), MXCFB_WAIT_FOR_UPDATE_COMPLETE, data)
+    if res < 0:
+        raise MXCFBException(res)
