@@ -21,8 +21,6 @@ from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 
 from libremarkable._framebuffer import WaveformMode
 
-from libremarkable._color import WHITE
-from libremarkable._color import BLACK
 from libremarkable._color import c_t
 from libremarkable._color import rgb565_to_rgb888
 from libremarkable._color import rgb888_to_rgb565
@@ -63,8 +61,8 @@ def asserti(name, value, expected):
     print(f"  {type(value).__name__} not instance of {expected.__name__}")
 
 
-assertv("WHITE", WHITE.value, 0xFFFF)
-assertv("BLACK", BLACK.value, 0x0000)
+assertv("WHITE", fb.getcolor("white").value, 0xFFFF)
+assertv("BLACK", fb.getcolor("black").value, 0x0000)
 color888 = ImageColor.getrgb("white")
 assertv("rgb565_to_rgb888(white)", rgb565_to_rgb888(0xFFFF), color888)
 assertv("rgb888_to_rgb565(white)", rgb888_to_rgb565(*color888), 0xFFFF)
@@ -84,28 +82,28 @@ print(f"Height: {fb.height()}")
 
 
 with performance_log("Init to white"):
-    fb.set_color(WHITE)
+    fb.set_color("white")
 
 with performance_log("Screen Update"):
     fb.update_full(WaveformMode.HighQualityGrayscale, sync=True)
 
 with performance_log("Total"):
     with performance_log("Black Rectangle"):
-        fb.set_rect(10, 10, 500, 500, BLACK)
+        fb.set_rect(10, 10, 500, 500, "black")
 
     with performance_log("Border"):
-        fb.draw_rect(6, 6, 514, 514, BLACK, lineSize=3)
+        fb.draw_rect(6, 6, 514, 514, "black", lineSize=3)
 
     with performance_log("Screen Update"):
         fb.update(0, 0, 520, 520, WaveformMode.Mono)
 
     with performance_log("Checkboard background"):
-        fb.set_rect(210, 210, 100, 100, WHITE)
+        fb.set_rect(210, 210, 100, 100, "white")
 
     with performance_log("Checkboard dots"):
         for y in range(210, 310, 2):
             for x in range(210, 310, 2):
-                fb.set_pixel(x, y, BLACK)
+                fb.set_pixel(x, y, "black")
 
     with performance_log("Screen Update"):
         fb.update(210, 210, 310, 310, WaveformMode.Mono)

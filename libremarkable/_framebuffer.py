@@ -20,6 +20,7 @@ from . import _mxcfb
 from . import _rm2fb
 
 from ._color import c_t
+from ._color import getrgb
 
 from ._device import DeviceType
 from ._device import current
@@ -208,7 +209,10 @@ class FrameBuffer:
         return FrameBuffer.get_row_offset(y) + x + FrameBuffer.x_offset()
 
     @staticmethod
-    def set_pixel(x: int, y: int, color: c_t) -> None:
+    def set_pixel(x: int, y: int, color: c_t | str) -> None:
+        if isinstance(color, str):
+            color = FrameBuffer.getcolor(color)
+
         _ensure_fb()["data"][FrameBuffer.get_offset(x, y)] = color
 
     @staticmethod
@@ -216,9 +220,12 @@ class FrameBuffer:
         return _ensure_fb()["data"][FrameBuffer.get_offset(x, y)]
 
     @staticmethod
-    def set_row(x: int, y: int, width: int, color: c_t) -> None:
+    def set_row(x: int, y: int, width: int, color: c_t | str) -> None:
         assert width > 0
         assert x + width <= FrameBuffer.width()
+        if isinstance(color, str):
+            color = FrameBuffer.getcolor(color)
+
         data = (c_t * width).from_buffer(bytearray(color) * width)
         _set_line_to_data(x, y, data)
 
@@ -229,33 +236,51 @@ class FrameBuffer:
         ]
 
     @staticmethod
-    def set_col(x: int, y: int, height: int, color: c_t) -> None:
+    def set_col(x: int, y: int, height: int, color: c_t | str) -> None:
         assert height
         assert x + height <= height()
+        if isinstance(color, str):
+            color = FrameBuffer.getcolor(color)
+
         for i in range(y, y + height):
             FrameBuffer.set_pixel(x, i, color)
 
     @staticmethod
-    def set_rect(left: int, top: int, width: int, height: int, color: c_t) -> None:
+    def set_rect(
+        left: int, top: int, width: int, height: int, color: c_t | str
+    ) -> None:
         assert 0 <= left < FrameBuffer.width(), f"left of {left} is invalid"
         assert 0 <= top < FrameBuffer.height(), f"top of {top} is invalid"
         assert 0 < width <= FrameBuffer.width() - left, f"width of {width} is invalid"
         assert (
             0 < height <= FrameBuffer.height() - top
         ), f"height of {height} is invalid"
+        if isinstance(color, str):
+            color = FrameBuffer.getcolor(color)
 
         data = (c_t * width).from_buffer(bytearray(color) * width)
         for y in range(top, top + height):
             _set_line_to_data(left, y, data)
 
     @staticmethod
-    def set_color(color: c_t) -> None:
+    def set_color(color: c_t | str) -> None:
+        if isinstance(color, str):
+            color = FrameBuffer.getcolor(color)
+
         FrameBuffer.set_rect(0, 0, FrameBuffer.width(), FrameBuffer.height(), color)
 
     @staticmethod
     def draw_rect(
-        left: int, top: int, right: int, bottom: int, color: c_t, lineSize: int = 1
+        left: int,
+        top: int,
+        right: int,
+        bottom: int,
+        color: c_t | str,
+        lineSize: int = 1,
     ) -> None:
+        if isinstance(color, str):
+            color = FrameBuffer.getcolor(color)
+
         FrameBuffer.set_rect(left, top, right - left, lineSize, color)  # Top line
         FrameBuffer.set_rect(
             left, bottom - lineSize, right - left, lineSize, color
@@ -291,14 +316,21 @@ class FrameBuffer:
         width: int,
         height: int,
         text: str,
-        color: str = "black",
+        color: c_t | str = "black",
         fontSize: int = 16,
     ):
         image = FrameBuffer.to_image(left, top, width, height)
+        if isinstance(color, str):
+            color = ImageColor.getcolor(color, image.mode)
+
+        else:
+            # TODO - handle when IMAGE_MODE has more bands
+            color = color.value
+
         ImageDraw.Draw(image).text(
             (0, 0),
             text,
-            ImageColor.getcolor(color, image.mode),
+            color,
             font=ImageFont.load_default(size=fontSize),
         )
         FrameBuffer.draw_image(left, top, image)
@@ -310,15 +342,22 @@ class FrameBuffer:
         width: int,
         height: int,
         text: str,
-        color: str = "black",
+        color: c_t | str = "black",
         fontSize: int = 16,
         align: str = "left",
     ):
         image = FrameBuffer.to_image(left, top, width, height)
+        if isinstance(color, str):
+            color = ImageColor.getcolor(color, image.mode)
+
+        else:
+            # TODO - handle when IMAGE_MODE has more bands
+            color = color.value
+
         ImageDraw.Draw(image).multiline_text(
             (0, 0),
             text,
-            ImageColor.getcolor(color, image.mode),
+            color,
             font=ImageFont.load_default(size=fontSize),
         )
         FrameBuffer.draw_image(left, top, image)
@@ -343,3 +382,7 @@ class FrameBuffer:
         left += FrameBuffer.x_offset()
         top += FrameBuffer.y_offset()
         return _ensure_fb()["image"].crop((left, top, left + width, top + height))
+
+    @staticmethod
+    def getcolor(name_or_hex: str) -> c_t:
+        return getrgb(name_or_hex)
