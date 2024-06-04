@@ -71,3 +71,10 @@ class Region(MutableSet[Rect]):
     @property
     def toInt(self) -> Self:
         return Region([x.toInt() for x in self])
+
+
+__all__ = [
+    "Point",
+    "Rect",
+    "Region",
+]
