@@ -72,9 +72,9 @@ class FrameBuffer:
     def path():
         return implementation().path()
 
-    @staticmethod
-    def open():
-        return open(FrameBuffer.path(), "r+b")
+    @classmethod
+    def open(cls):
+        return open(cls.path(), "r+b")
 
     @staticmethod
     def size():
@@ -110,13 +110,13 @@ class FrameBuffer:
     def y_offset() -> int:
         return implementation().y_offset()
 
-    @staticmethod
+    @classmethod
     @contextmanager
-    def mmap():
+    def mmap(cls):
         global _fb
         if _fb is None:
-            f = FrameBuffer.open()
-            size = FrameBuffer.size()
+            f = cls.open()
+            size = cls.size()
             mm = mmap(
                 f.fileno(),
                 size,
@@ -124,7 +124,7 @@ class FrameBuffer:
                 prot=PROT_READ | PROT_WRITE,
                 access=ACCESS_DEFAULT,
             )
-            offset = FrameBuffer.get_offset(0, 0)
+            offset = cls.get_offset(0, 0)
             _fb = {
                 "f": f,
                 "mm": mm,
@@ -132,7 +132,7 @@ class FrameBuffer:
                 "offset": offset,
                 "image": Image.frombuffer(
                     IMAGE_MODE,
-                    (FrameBuffer.virtual_width(), FrameBuffer.virtual_height()),
+                    (cls.virtual_width(), cls.virtual_height()),
                     mm,
                 ),
             }
@@ -150,8 +150,9 @@ class FrameBuffer:
             _fb["f"].close()
             _fb = None
 
-    @staticmethod
+    @classmethod
     def update(
+        cls,
         x: int,
         y: int,
         width: int,
@@ -176,17 +177,17 @@ class FrameBuffer:
         data.update_marker = marker
         implementation().update(data)
         if sync:
-            FrameBuffer.wait(data.update_marker)
+            cls.wait(data.update_marker)
 
         return data.update_marker
 
-    @staticmethod
-    def update_full(waveform: WaveformMode, marker: int = None, sync=False):
-        FrameBuffer.update(
+    @classmethod
+    def update_full(cls, waveform: WaveformMode, marker: int = None, sync=False):
+        cls.update(
             0,
             0,
-            FrameBuffer.width(),
-            FrameBuffer.height(),
+            cls.width(),
+            cls.height(),
             waveform,
             marker,
             partial=False,
@@ -197,80 +198,82 @@ class FrameBuffer:
     def wait(marker: int) -> None:
         implementation().wait(marker)
 
-    @staticmethod
-    def get_row_offset(y: int) -> int:
-        assert 0 <= y <= FrameBuffer.height()
-        return (y + FrameBuffer.y_offset()) * FrameBuffer.virtual_width()
+    @classmethod
+    def get_row_offset(cls, y: int) -> int:
+        assert 0 <= y <= cls.height()
+        return (y + cls.y_offset()) * cls.virtual_width()
 
-    @staticmethod
-    def get_offset(x: int, y: int) -> int:
-        assert 0 <= x <= FrameBuffer.width(), f"{x} not within bounds"
-        assert 0 <= y <= FrameBuffer.height(), f"{y} not within bounds"
-        return FrameBuffer.get_row_offset(y) + x + FrameBuffer.x_offset()
+    @classmethod
+    def get_offset(cls, x: int, y: int) -> int:
+        assert 0 <= x <= cls.width(), f"{x} not within bounds"
+        assert 0 <= y <= cls.height(), f"{y} not within bounds"
+        return cls.get_row_offset(y) + x + cls.x_offset()
 
-    @staticmethod
-    def set_pixel(x: int, y: int, color: c_t | str) -> None:
+    @classmethod
+    def set_pixel(cls, x: int, y: int, color: c_t | str) -> None:
         if isinstance(color, str):
-            color = FrameBuffer.getcolor(color)
+            color = cls.getcolor(color)
 
-        _ensure_fb()["data"][FrameBuffer.get_offset(x, y)] = color
+        _ensure_fb()["data"][cls.get_offset(x, y)] = color
 
-    @staticmethod
-    def get_pixel(x: int, y: int) -> int:
-        return _ensure_fb()["data"][FrameBuffer.get_offset(x, y)]
+    @classmethod
+    def get_pixel(cls, x: int, y: int) -> int:
+        return _ensure_fb()["data"][cls.get_offset(x, y)]
 
-    @staticmethod
-    def set_row(x: int, y: int, width: int, color: c_t | str) -> None:
+    @classmethod
+    def set_row(cls, x: int, y: int, width: int, color: c_t | str) -> None:
         assert width > 0
-        assert x + width <= FrameBuffer.width()
+        assert x + width <= cls.width()
         if isinstance(color, str):
-            color = FrameBuffer.getcolor(color)
+            color = cls.getcolor(color)
 
         data = (c_t * width).from_buffer(bytearray(color) * width)
         _set_line_to_data(x, y, data)
 
-    @staticmethod
-    def get_row(x: int, y: int, width: int) -> tuple[int]:
-        return _ensure_fb()["data"][
-            FrameBuffer.get_offset(x, y) : FrameBuffer.get_offset(x + width, y)
-        ]
+    @classmethod
+    def get_row(cls, x: int, y: int, width: int) -> tuple[int]:
+        return _ensure_fb()["data"][cls.get_offset(x, y) : cls.get_offset(x + width, y)]
 
-    @staticmethod
-    def set_col(x: int, y: int, height: int, color: c_t | str) -> None:
+    @classmethod
+    def set_col(cls, x: int, y: int, height: int, color: c_t | str) -> None:
         assert height
         assert x + height <= height()
         if isinstance(color, str):
-            color = FrameBuffer.getcolor(color)
+            color = cls.getcolor(color)
 
         for i in range(y, y + height):
-            FrameBuffer.set_pixel(x, i, color)
+            cls.set_pixel(x, i, color)
 
-    @staticmethod
+    @classmethod
     def set_rect(
-        left: int, top: int, width: int, height: int, color: c_t | str
+        cls,
+        left: int,
+        top: int,
+        width: int,
+        height: int,
+        color: c_t | str,
     ) -> None:
-        assert 0 <= left < FrameBuffer.width(), f"left of {left} is invalid"
-        assert 0 <= top < FrameBuffer.height(), f"top of {top} is invalid"
-        assert 0 < width <= FrameBuffer.width() - left, f"width of {width} is invalid"
-        assert (
-            0 < height <= FrameBuffer.height() - top
-        ), f"height of {height} is invalid"
+        assert 0 <= left < cls.width(), f"left of {left} is invalid"
+        assert 0 <= top < cls.height(), f"top of {top} is invalid"
+        assert 0 < width <= cls.width() - left, f"width of {width} is invalid"
+        assert 0 < height <= cls.height() - top, f"height of {height} is invalid"
         if isinstance(color, str):
-            color = FrameBuffer.getcolor(color)
+            color = cls.getcolor(color)
 
         data = (c_t * width).from_buffer(bytearray(color) * width)
         for y in range(top, top + height):
             _set_line_to_data(left, y, data)
 
-    @staticmethod
-    def set_color(color: c_t | str) -> None:
+    @classmethod
+    def set_color(cls, color: c_t | str) -> None:
         if isinstance(color, str):
-            color = FrameBuffer.getcolor(color)
+            color = cls.getcolor(color)
 
-        FrameBuffer.set_rect(0, 0, FrameBuffer.width(), FrameBuffer.height(), color)
+        cls.set_rect(0, 0, cls.width(), cls.height(), color)
 
-    @staticmethod
+    @classmethod
     def draw_rect(
+        cls,
         left: int,
         top: int,
         right: int,
@@ -279,28 +282,24 @@ class FrameBuffer:
         lineSize: int = 1,
     ) -> None:
         if isinstance(color, str):
-            color = FrameBuffer.getcolor(color)
+            color = cls.getcolor(color)
 
-        FrameBuffer.set_rect(left, top, right - left, lineSize, color)  # Top line
-        FrameBuffer.set_rect(
+        cls.set_rect(left, top, right - left, lineSize, color)  # Top line
+        cls.set_rect(
             left, bottom - lineSize, right - left, lineSize, color
         )  # Bottom line
-        FrameBuffer.set_rect(left, top, lineSize, bottom - top, color)  # Left line
-        FrameBuffer.set_rect(
-            right - lineSize, top, lineSize, bottom - top, color
-        )  # Right line
+        cls.set_rect(left, top, lineSize, bottom - top, color)  # Left line
+        cls.set_rect(right - lineSize, top, lineSize, bottom - top, color)  # Right line
 
-    @staticmethod
-    def draw_image(left: int, top: int, image: Image) -> None:
+    @classmethod
+    def draw_image(cls, left: int, top: int, image: Image) -> None:
         width = image.width
         height = image.height
 
-        assert 0 <= left < FrameBuffer.width(), f"left of {left} is invalid"
-        assert 0 <= top < FrameBuffer.height(), f"top of {top} is invalid"
-        assert 0 < width <= FrameBuffer.width() - left, f"width of {width} is invalid"
-        assert (
-            0 < height <= FrameBuffer.height() - top
-        ), f"height of {height} is invalid"
+        assert 0 <= left < cls.width(), f"left of {left} is invalid"
+        assert 0 <= top < cls.height(), f"top of {top} is invalid"
+        assert 0 < width <= cls.width() - left, f"width of {width} is invalid"
+        assert 0 < height <= cls.height() - top, f"height of {height} is invalid"
 
         if image.mode != IMAGE_MODE:
             image = image.convert(IMAGE_MODE)
@@ -309,8 +308,9 @@ class FrameBuffer:
         for y in range(0, image.height):
             _set_line_to_data(left, top + y, data[y * width : y * width + width])
 
-    @staticmethod
+    @classmethod
     def draw_text(
+        cls,
         left: int,
         top: int,
         width: int,
@@ -319,7 +319,7 @@ class FrameBuffer:
         color: c_t | str = "black",
         fontSize: int = 16,
     ):
-        image = FrameBuffer.to_image(left, top, width, height)
+        image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
             color = ImageColor.getcolor(color, image.mode)
 
@@ -333,10 +333,11 @@ class FrameBuffer:
             color,
             font=ImageFont.load_default(size=fontSize),
         )
-        FrameBuffer.draw_image(left, top, image)
+        cls.draw_image(left, top, image)
 
-    @staticmethod
+    @classmethod
     def draw_multiline_text(
+        cls,
         left: int,
         top: int,
         width: int,
@@ -346,7 +347,7 @@ class FrameBuffer:
         fontSize: int = 16,
         align: str = "left",
     ):
-        image = FrameBuffer.to_image(left, top, width, height)
+        image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
             color = ImageColor.getcolor(color, image.mode)
 
@@ -360,27 +361,29 @@ class FrameBuffer:
             color,
             font=ImageFont.load_default(size=fontSize),
         )
-        FrameBuffer.draw_image(left, top, image)
+        cls.draw_image(left, top, image)
 
-    @staticmethod
+    @classmethod
     def to_image(
-        left: int = 0, top: int = 0, width: int = None, height: int = None
+        cls,
+        left: int = 0,
+        top: int = 0,
+        width: int = None,
+        height: int = None,
     ) -> Image:
         if width is None:
-            width = FrameBuffer.width()
+            width = cls.width()
 
         if height is None:
-            height = FrameBuffer.height()
+            height = cls.height()
 
-        assert 0 <= left < FrameBuffer.width(), f"left of {left} is invalid"
-        assert 0 <= top < FrameBuffer.height(), f"top of {top} is invalid"
-        assert 0 < width <= FrameBuffer.width() - left, f"width of {width} is invalid"
-        assert (
-            0 < height <= FrameBuffer.height() - top
-        ), f"height of {height} is invalid"
+        assert 0 <= left < cls.width(), f"left of {left} is invalid"
+        assert 0 <= top < cls.height(), f"top of {top} is invalid"
+        assert 0 < width <= cls.width() - left, f"width of {width} is invalid"
+        assert 0 < height <= cls.height() - top, f"height of {height} is invalid"
 
-        left += FrameBuffer.x_offset()
-        top += FrameBuffer.y_offset()
+        left += cls.x_offset()
+        top += cls.y_offset()
         return _ensure_fb()["image"].crop((left, top, left + width, top + height))
 
     @staticmethod
