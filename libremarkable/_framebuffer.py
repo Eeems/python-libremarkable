@@ -428,7 +428,7 @@ class FrameBuffer:
         cls,
         key: int | slice | tuple[int, int],
         value: c_t | str | Iterable[c_t] | Iterable[str],
-    ):
+    ) -> None:
         f = _ensure_fb()
         if isinstance(key, tuple):
             assert isinstance(value, c_t) or isinstance(value, str)
@@ -467,5 +467,23 @@ class FrameBuffer:
             raise NotImplementedError()
 
     @classmethod
-    def __iter__(cls):
+    def __iter__(cls) -> iter:
         return iter(_ensure_fb()["data"])
+
+    @classmethod
+    def __len__(cls) -> int:
+        return cls.width() * cls.height()
+
+    @classmethod
+    def __contains__(cls, color: c_t | str | int) -> bool:
+        if isinstance(color, str):
+            color = cls.getcolor(color)
+
+        if isinstance(color, c_t):
+            color = color.value
+
+        for y in range(0, cls.height()):
+            if color in cls.get_row(0, y, cls.width()):
+                return True
+
+        return False

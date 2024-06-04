@@ -5,6 +5,8 @@ from libremarkable import TouchEvent
 from libremarkable import FrameBuffer as fb
 from libremarkable._framebuffer import WaveformMode
 
+black = fb.getcolor("black")
+
 for event in Input.events(block=True):
     if not isinstance(event, WacomEvent) and not isinstance(event, TouchEvent):
         continue
@@ -13,5 +15,5 @@ for event in Input.events(block=True):
         continue
 
     x, y = event.screenPos
-    fb[(x, y)] = "black"
+    fb.set_pixel(x, y, black)
     fb.update(x, y, 1, 1, WaveformMode.Mono)
