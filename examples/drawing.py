@@ -25,10 +25,7 @@ for event in Input.events(block=True):
     if screenPos is None:
         continue
 
-    x1, y1 = screenPos
-    x2, y2 = event.previousScreenPos or (x1, y1)
-    # print((x1, y1), (x2, y2))
-    print("data:", event.data)
-    print("previous:", event.previousData)
+    x2, y2 = screenPos
+    x1, y1 = (event.previousScreenPos if event.was_down else None) or (x2, y2)
     fb.draw_line(x1, y1, x2, y2, black)
     fb.update(x1, y1, x2 - x1 + 1, y2 - y1 + 1, WaveformMode.Mono)
