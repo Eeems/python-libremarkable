@@ -1,5 +1,7 @@
 import os
 
+from collections.abc import Iterable
+
 from mmap import mmap
 from mmap import MAP_SHARED
 from mmap import MAP_POPULATE
@@ -389,3 +391,81 @@ class FrameBuffer:
     @staticmethod
     def getcolor(name_or_hex: str) -> c_t:
         return getrgb(name_or_hex)
+
+    @classmethod
+    def __getitem__(cls, key: int | slice | tuple[int, int]) -> c_t:
+        f = _ensure_fb()
+        if isinstance(key, tuple):
+            x, y = key
+            return cls.get_pixel(x, y)
+
+        if isinstance(key, slice):
+            startY = int(key.start / cls.width())
+            endY = int(key.stop / cls.width())
+            data = []
+            for y in range(startY, endY + 1):
+                startX = key.start - (startY * cls.width()) if y == startY else 0
+                endX = (
+                    key.stop - (endY * cls.width())
+                    if y == endY
+                    else cls.width() - startX
+                )
+                startOffset = cls.get_offset(startX, y)
+                stopOffset = cls.get_offset(endX, y)
+                step = key.step or 1
+                data += f["data"][startOffset:stopOffset:step]
+
+            return data
+
+        if isinstance(key, int):
+            y = int(key / cls.width())
+            return f["data"][cls.get_offset(key - y, y)]
+
+        raise NotImplementedError()
+
+    @classmethod
+    def __setitem__(
+        cls,
+        key: int | slice | tuple[int, int],
+        value: c_t | str | Iterable[c_t] | Iterable[str],
+    ):
+        f = _ensure_fb()
+        if isinstance(key, tuple):
+            assert isinstance(value, c_t) or isinstance(value, str)
+            x, y = key
+            cls.set_pixel(x, y, value)
+
+        elif isinstance(key, slice):
+            assert isinstance(value, Iterable)
+            value = [cls.getcolor(x) if isinstance(x, str) else x for x in value]
+            startY = int(key.start / cls.width())
+            endY = int(key.stop / cls.width())
+            startValueOffset = 0
+            for y in range(startY, endY + 1):
+                startX = key.start - (startY * cls.width()) if y == startY else 0
+                endX = (
+                    key.stop - (endY * cls.width())
+                    if y == endY
+                    else cls.width() - startX
+                )
+                startOffset = cls.get_offset(startX, y)
+                stopOffset = cls.get_offset(endX, y)
+                step = key.step or 1
+                size = stopOffset - startOffset
+                stopValueOffset = startValueOffset + size
+                f["data"][startOffset:stopOffset:step] = value[
+                    startValueOffset:stopValueOffset:step
+                ]
+                startValueOffset += size
+
+        elif isinstance(key, int):
+            assert isinstance(value, c_t) or isinstance(value, str)
+            y = int(key / cls.width())
+            f["data"][cls.get_offset(key - y, y)] = value
+
+        else:
+            raise NotImplementedError()
+
+    @classmethod
+    def __iter__(cls):
+        return iter(_ensure_fb()["data"])

@@ -9,6 +9,8 @@ from ._input import KeyEvent
 
 from ._framebuffer import FrameBuffer
 
+FrameBuffer = FrameBuffer()  # Must be done to expose __setitem__
+
 __all__ = [
     "DeviceType",
     "deviceType",
