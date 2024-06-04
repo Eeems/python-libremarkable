@@ -2,6 +2,8 @@ import os
 
 from collections.abc import Iterable
 
+from bresenham import bresenham
+
 from mmap import mmap
 from mmap import MAP_SHARED
 from mmap import MAP_POPULATE
@@ -487,3 +489,8 @@ class FrameBuffer:
                 return True
 
         return False
+
+    @classmethod
+    def draw_line(cls, x1: int, y1: int, x2: int, y2: int, color: c_t | str) -> None:
+        for x, y in bresenham(x1, y1, x2, y2):
+            cls.set_pixel(x, y, color)

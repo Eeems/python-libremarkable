@@ -29,7 +29,7 @@ from evdev.ecodes import SYN_MT_REPORT
 from selectors import DefaultSelector
 from selectors import EVENT_READ
 
-from . import _framebuffer as fb
+from ._framebuffer import FrameBuffer as fb
 
 from ._device import DeviceType
 from ._device import current as deviceType
@@ -61,8 +61,8 @@ class Event:
     def __init__(self, device, state):
         self.device = device
         self.rawEvents = state["events"]
-        self.previousData = state["previous"]
-        self.data = state["current"]
+        self.previousData = state["previous"].get(state["slot"], {})
+        self.data = state["current"].get(state["slot"], {})
 
     def __repr__(self):
         return f"<InputEvent rawEvents={len(self.rawEvents)}>"
@@ -97,6 +97,9 @@ class TouchEvent(Event):
 
     @property
     def screenPos(self) -> tuple[int, int] | None:
+        if self.x is None or self.y is None:
+            return None
+
         x, y = self.x, 1 - self.y
         if deviceType == DeviceType.RM1:
             x = 1 - x
@@ -135,6 +138,9 @@ class WacomEvent(Event):
 
     @property
     def screenPos(self) -> tuple[int, int] | None:
+        if self.x is None or self.y is None:
+            return None
+
         x, y = self.x, self.y
         if deviceType in (DeviceType.RM1, DeviceType.RM2):
             x, y = _rotate((x, y), center=(0.5, 0.5), angle=270)
@@ -167,6 +173,10 @@ class WacomEvent(Event):
 
 
 def KeyEvent(Event):
+    def __init__(self, device, state):
+        super().__init__(device, state)
+        # TODO - sort out key states
+
     def __repr__(self):
         return "<KeyEvent rawEvents={len(self.rawEvents)}>"
 
@@ -276,6 +286,19 @@ class Input:
             yield d, e
 
     @classmethod
+    def _event(cls, device: InputDevice, state: dict) -> Event:
+        if state["type"] == "touch":
+            return TouchEvent(device, state)
+
+        if state["type"] == "wacom":
+            return WacomEvent(device, state)
+
+        if state["type"] == "key":
+            return KeyEvent(device, state)
+
+        return Event(device, state)
+
+    @classmethod
     def events(cls, block: bool = False) -> Event | None:
         states = {}
         for d, events in cls.rawEvents(block=block):
@@ -291,27 +314,30 @@ class Input:
                     "type": cls.deviceType(d),
                     "current": {},
                     "previous": {},
+                    "slot": 0,
                 }
 
             state = states[d.path]
+
             for e in events:
-                # TODO - handle touch slots
-                if e.type != EV_SYN or e.code not in (SYN_REPORT, SYN_MT_REPORT):
-                    state["events"].append(e)
-                    state["current"][(e.type, e.code)] = e.value
+                if e.type == EV_SYN and e.code in (SYN_REPORT, SYN_MT_REPORT):
+                    yield cls._event(d, state)
+                    state["events"] = []
+                    state["previous"] = state["current"]
                     continue
 
-                if state["type"] == "touch":
-                    yield TouchEvent(d, state)
+                current = state["current"]
+                if e.type == EV_ABS and e.code == ABS_MT_SLOT:
+                    if state["events"]:
+                        yield cls._event(d, state)
+                        state["events"] = []
+                        state["previous"] = state["current"]
 
-                elif state["type"] == "wacom":
-                    yield WacomEvent(d, state)
+                    state["slot"] = e.value
 
-                elif state["type"] == "key":
-                    yield KeyEvent(d, state)
+                state["events"].append(e)
+                if state["slot"] not in current.keys():
+                    current[state["slot"]] = {}
 
-                else:
-                    yield Event(d, state)
-
-                state["events"] = []
-                state["previous"] = state["current"]
+                current[state["slot"]][(e.type, e.code)] = e.value
+                continue

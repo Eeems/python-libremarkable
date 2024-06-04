@@ -8,6 +8,7 @@ from ._input import WacomEvent
 from ._input import KeyEvent
 
 from ._framebuffer import FrameBuffer
+from ._framebuffer import WaveformMode
 
 FrameBuffer = FrameBuffer()  # Must be done to expose __setitem__
 
@@ -20,4 +21,5 @@ __all__ = [
     "WacomEvent",
     "KeyEvent",
     "FrameBuffer",
+    "WaveformMode",
 ]
