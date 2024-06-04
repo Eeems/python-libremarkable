@@ -10,6 +10,8 @@ from ._input import KeyEvent
 from ._framebuffer import FrameBuffer
 from ._framebuffer import WaveformMode
 
+from ._color import c_t
+
 FrameBuffer = FrameBuffer()  # Must be done to expose __setitem__
 
 __all__ = [
@@ -22,4 +24,5 @@ __all__ = [
     "KeyEvent",
     "FrameBuffer",
     "WaveformMode",
+    "c_t",
 ]

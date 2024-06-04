@@ -52,11 +52,3 @@ def rgb565_to_rgb888(color: int) -> tuple[int]:
 
 def getrgb(color: str) -> c_t:
     return c_t(rgb888_to_rgb565(*ImageColor.getrgb(color)))
-
-
-WHITE = getrgb("white")
-BLACK = getrgb("black")
-GRAY = getrgb("gray")
-RED = getrgb("red")
-BLUE = getrgb("blue")
-GREEN = getrgb("green")
