@@ -310,6 +310,7 @@ class Input:
     def rawEvents(
         cls, devices: list[InputDevice] = None, block: bool = False
     ) -> Iterator[tuple[InputDevice | None, list[InputEvent]]]:
+        # TODO - support new devices being added/removed dynamically (type folio)
         selector = DefaultSelector()
         if devices is None:
             devices = cls.devices()
