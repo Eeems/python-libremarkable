@@ -1,5 +1,7 @@
 import math
 
+from copy import deepcopy
+
 from typing import Iterator
 
 from evdev import list_devices
@@ -79,13 +81,39 @@ class Event:
         min, max = self._get_abs_range(code)
         return (value - min) / (max - min)
 
+    def _get_previous_abs_float(
+        self, type: int, code: int, default: int | None
+    ) -> float | None:
+        value = self.previousData.get((type, code), None)
+        if value is None:
+            return default
+
+        min, max = self._get_abs_range(code)
+        return (value - min) / (max - min)
+
 
 class TouchEvent(Event):
+    def __init__(self, device, state):
+        super().__init__(device, state)
+        if self.previousTrackingId == -1:
+            self.previousData = {(EV_ABS, ABS_MT_TRACKING_ID): -1}
+
     def __repr__(self):
         return (
             f"<TouchEvent {self.trackingId} slot={self.slot} position={self.x},{self.y} "
             f"pressure={self.pressure} rawEvents={len(self.rawEvents)}>"
         )
+
+    def _screenPos(self, x: int | None, y: int | None) -> tuple[int, int] | None:
+        if x is None or y is None:
+            return None
+
+        y = 1 - y
+        if deviceType == DeviceType.RM1:
+            x = 1 - x
+
+        maxX, maxY = fb.width() - 1, fb.height() - 1
+        return int(x * maxX), int(y * maxY)
 
     @property
     def x(self) -> float | None:
@@ -97,15 +125,7 @@ class TouchEvent(Event):
 
     @property
     def screenPos(self) -> tuple[int, int] | None:
-        if self.x is None or self.y is None:
-            return None
-
-        x, y = self.x, 1 - self.y
-        if deviceType == DeviceType.RM1:
-            x = 1 - x
-
-        maxX, maxY = fb.width() - 1, fb.height() - 1
-        return int(x * maxX), int(y * maxY)
+        return self._screenPos(self.x, self.y)
 
     @property
     def pressure(self) -> float | None:
@@ -119,14 +139,49 @@ class TouchEvent(Event):
     def trackingId(self) -> int | None:
         return self.data.get((EV_ABS, ABS_MT_TRACKING_ID), None)
 
+    @property
+    def previousX(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_MT_POSITION_X, None)
+
+    @property
+    def previousY(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_MT_POSITION_Y, None)
+
+    @property
+    def previousScreenPos(self) -> tuple[int, int] | None:
+        return self._screenPos(self.previousX, self.previousY)
+
+    @property
+    def previousPressure(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
+
+    @property
+    def previousTrackingId(self) -> int | None:
+        return self.previousData.get((EV_ABS, ABS_MT_TRACKING_ID), None)
+
 
 class WacomEvent(Event):
+    def __init__(self, device, state):
+        super().__init__(device, state)
+        if not self.was_down and not self.was_hover:
+            self.previousData = {}
+
     def __repr__(self):
         return (
             f"<WacomEvent position={self.x},{self.y} distance={self.distance} pressure={self.pressure} "
             f"tilt={self.tilt} {' hover ' if self.is_hover else ''}{' pressed ' if self.is_down else ''}"
             f"rawEvents={len(self.rawEvents)}>"
         )
+
+    def _screenPos(self, x: int | None, y: int | None) -> tuple[int, int] | None:
+        if x is None or y is None:
+            return None
+
+        if deviceType in (DeviceType.RM1, DeviceType.RM2):
+            x, y = _rotate((x, y), center=(0.5, 0.5), angle=270)
+
+        maxX, maxY = fb.width() - 1, fb.height() - 1
+        return int(x * maxX), int(y * maxY)
 
     @property
     def x(self) -> float | None:
@@ -138,15 +193,7 @@ class WacomEvent(Event):
 
     @property
     def screenPos(self) -> tuple[int, int] | None:
-        if self.x is None or self.y is None:
-            return None
-
-        x, y = self.x, self.y
-        if deviceType in (DeviceType.RM1, DeviceType.RM2):
-            x, y = _rotate((x, y), center=(0.5, 0.5), angle=270)
-
-        maxX, maxY = fb.width() - 1, fb.height() - 1
-        return int(x * maxX), int(y * maxY)
+        return self._screenPos(self.x, self.y)
 
     @property
     def distance(self) -> float | None:
@@ -170,6 +217,41 @@ class WacomEvent(Event):
     @property
     def is_hover(self) -> bool:
         return not self.is_down and self.data.get((EV_KEY, BTN_TOOL_PEN), 0)
+
+    @property
+    def previousX(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_X, None)
+
+    @property
+    def previousY(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_Y, None)
+
+    @property
+    def previousScreenPos(self) -> tuple[int, int] | None:
+        return self._screenPos(self.previousX, self.previousY)
+
+    @property
+    def previousDistance(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_DISTANCE, None)
+
+    @property
+    def previousPressure(self) -> float | None:
+        return self._get_previous_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
+
+    @property
+    def previousTilt(self) -> tuple[int, int]:
+        return (
+            self._get_previous_abs_float(EV_ABS, ABS_TILT_X, 0),
+            self._get_previous_abs_float(EV_ABS, ABS_TILT_Y, 0),
+        )
+
+    @property
+    def was_down(self) -> bool:
+        return bool(self.previousData.get((EV_KEY, BTN_TOUCH), 0))
+
+    @property
+    def was_hover(self) -> bool:
+        return not self.was_down and self.previousData.get((EV_KEY, BTN_TOOL_PEN), 0)
 
 
 def KeyEvent(Event):
@@ -323,7 +405,7 @@ class Input:
                 if e.type == EV_SYN and e.code in (SYN_REPORT, SYN_MT_REPORT):
                     yield cls._event(d, state)
                     state["events"] = []
-                    state["previous"] = state["current"]
+                    state["previous"] = deepcopy(state["current"])
                     continue
 
                 current = state["current"]
@@ -331,7 +413,7 @@ class Input:
                     if state["events"]:
                         yield cls._event(d, state)
                         state["events"] = []
-                        state["previous"] = state["current"]
+                        state["previous"] = deepcopy(state["current"])
 
                     state["slot"] = e.value
 
