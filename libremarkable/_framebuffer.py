@@ -37,6 +37,7 @@ from ._mxcfb import mxcfb_update_data
 # from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
 
 IMAGE_MODE = "I;16"
+DEFAULT_FONT_SIZE = 24
 
 _fb = None
 _marker = 0
@@ -321,7 +322,7 @@ class FrameBuffer:
         height: int,
         text: str,
         color: c_t | str = "black",
-        fontSize: int = 16,
+        fontSize: int = DEFAULT_FONT_SIZE,
     ):
         image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
@@ -348,7 +349,7 @@ class FrameBuffer:
         height: int,
         text: str,
         color: c_t | str = "black",
-        fontSize: int = 16,
+        fontSize: int = DEFAULT_FONT_SIZE,
         align: str = "left",
     ):
         image = cls.to_image(left, top, width, height)

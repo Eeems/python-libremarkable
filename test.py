@@ -109,13 +109,19 @@ with performance_log("Total"):
         fb.update(210, 210, 310, 310, WaveformMode.Mono)
 
     with performance_log("Draw text"):
-        fb.draw_text(800, 800, 100, 100, "Hello World!")
+        fb.draw_text(800, 800, 150, 100, "Hello World!")
 
     with performance_log("Screen Update"):
-        fb.update(800, 800, 100, 100, WaveformMode.HighQualityGrayscale)
+        fb.update(800, 800, 150, 100, WaveformMode.HighQualityGrayscale)
+
+    with performance_log("Draw multiline text"):
+        fb.draw_text(800, 900, 100, 100, "This is\nMultiline!")
+
+    with performance_log("Screen Update"):
+        fb.update(800, 900, 100, 100, WaveformMode.HighQualityGrayscale)
 
 with performance_log("Save text from framebuffer"):
-    image = fb.to_image(800, 800, 100, 100)
+    image = fb.to_image(800, 800, 150, 100)
     image.save("/tmp/py.text.png")
 
 with performance_log("Save entire framebuffer"):

@@ -26,6 +26,10 @@ for event in Input.events(block=True):
         continue
 
     x2, y2 = screenPos
-    x1, y1 = (event.previousScreenPos if event.was_down else None) or (x2, y2)
+    x1, y1 = (
+        event.previousScreenPos
+        if not isinstance(event, WacomEvent) or event.was_down
+        else None
+    ) or (x2, y2)
     fb.draw_line(x1, y1, x2, y2, black)
     fb.update(x1, y1, x2 - x1 + 1, y2 - y1 + 1, WaveformMode.Mono)
