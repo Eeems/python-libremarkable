@@ -83,18 +83,15 @@ if msqid < 0:
 
 
 @overload
-def send(data: wait_sem_data) -> None:
-    ...
+def send(data: wait_sem_data) -> None: ...
 
 
 @overload
-def send(data: xochitl_data) -> None:
-    ...
+def send(data: xochitl_data) -> None: ...
 
 
 @overload
-def send(data: mxcfb_update_data) -> None:
-    ...
+def send(data: mxcfb_update_data) -> None: ...
 
 
 def send(data):
@@ -139,6 +136,9 @@ def send(data):
         raise NotImplementedError()
 
 
+update = send
+
+
 def width() -> int:
     return 1404
 
@@ -158,8 +158,16 @@ def x_offset() -> int:
 y_offset = x_offset
 
 
-def pixel_size():
+def pixel_size() -> int:
     return sizeof(c_ushort)
+
+
+def path() -> str:
+    return "/dev/shm/swtfb.01"
+
+
+def getsize() -> int:
+    return os.path.getsize(path())
 
 
 def wait(marker: int) -> None:

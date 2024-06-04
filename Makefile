@@ -171,7 +171,7 @@ deploy: dist/libremarkable-${VERSION}-py3-none-any.whl
 install: deploy
 	echo -e "$$INSTALL_SCRIPT" | ssh root@10.11.99.1 bash -le
 
-test: install
+test: lint format install
 	cat test.py \
 	| ssh root@10.11.99.1 \
 	  "bash -ec 'PATH=${PATH} /opt/bin/python -u'"
@@ -216,7 +216,7 @@ format: $(VENV_BIN_ACTIVATE)
 
 format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff format --check
+	python -m ruff format
 
 
 .PHONY: clean install test deploy test-executable deploy-executable lint format _ruff wheel srcdist

@@ -14,33 +14,18 @@ from contextlib import contextmanager
 from PIL import Image
 from PIL import ImageColor
 
-from libremarkable._mxcfb import MXCFB_SEND_UPDATE
-from libremarkable._framebuffer import close_mmap_framebuffer
-from libremarkable._framebuffer import framebuffer_path
-from libremarkable._framebuffer import framebuffer_size
-from libremarkable._framebuffer import framebuffer_width
-from libremarkable._framebuffer import framebuffer_height
-from libremarkable._framebuffer import framebuffer_pixel_size
-from libremarkable._framebuffer import update
-from libremarkable._framebuffer import update_full
-from libremarkable._framebuffer import set_pixel
-from libremarkable._framebuffer import set_rect
-from libremarkable._framebuffer import set_color
-from libremarkable._framebuffer import draw_rect
-from libremarkable._framebuffer import draw_text
-from libremarkable._framebuffer import WaveformMode
-from libremarkable._framebuffer import use_rm2fb
-from libremarkable._framebuffer import get_offset
-from libremarkable._framebuffer import to_image
-from libremarkable._framebuffer import get_pixel
+from libremarkable import deviceType
+from libremarkable import FrameBuffer as fb
 
-from libremarkable._framebuffer import draw_image
+from libremarkable._mxcfb import MXCFB_SEND_UPDATE
+
+from libremarkable._framebuffer import WaveformMode
+
 from libremarkable._color import WHITE
 from libremarkable._color import BLACK
 from libremarkable._color import c_t
 from libremarkable._color import rgb565_to_rgb888
 from libremarkable._color import rgb888_to_rgb565
-from libremarkable import deviceType
 
 
 FAILED = False
@@ -87,66 +72,64 @@ color888 = ImageColor.getrgb("black")
 assertv("rgb565_to_rgb888(black)", rgb565_to_rgb888(0x0000), color888)
 assertv("rgb888_to_rgb565(black)", rgb888_to_rgb565(*color888), 0x0000)
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
-assertv("pixel_size", framebuffer_pixel_size(), sizeof(c_t))
-assertv("get_offset", get_offset(0, 0), 0)
-asserti("get_pixel", get_pixel(0, 0), int)
+assertv("pixel_size", fb.pixel_size(), sizeof(c_t))
+assertv("get_offset", fb.get_offset(0, 0), 0)
+asserti("get_pixel", fb.get_pixel(0, 0), int)
 
 print(f"Device Type: {deviceType}")
-print(f"FrameBuffer path: {framebuffer_path()}")
-print(f"Size: {framebuffer_size()}")
-print(f"rm2fb: {use_rm2fb()}")
-print(f"Width: {framebuffer_width()}")
-print(f"Height: {framebuffer_height()}")
+print(f"FrameBuffer path: {fb.path()}")
+print(f"Size: {fb.size()}")
+print(f"Width: {fb.width()}")
+print(f"Height: {fb.height()}")
 
 
 with performance_log("Init to white"):
-    set_color(WHITE)
+    fb.set_color(WHITE)
 
 with performance_log("Screen Update"):
-    update_full(WaveformMode.HighQualityGrayscale, sync=True)
+    fb.update_full(WaveformMode.HighQualityGrayscale, sync=True)
 
 with performance_log("Total"):
     with performance_log("Black Rectangle"):
-        set_rect(10, 10, 500, 500, BLACK)
+        fb.set_rect(10, 10, 500, 500, BLACK)
 
     with performance_log("Border"):
-        draw_rect(6, 6, 514, 514, BLACK, lineSize=3)
+        fb.draw_rect(6, 6, 514, 514, BLACK, lineSize=3)
 
     with performance_log("Screen Update"):
-        update(0, 0, 520, 520, WaveformMode.Mono)
+        fb.update(0, 0, 520, 520, WaveformMode.Mono)
 
     with performance_log("Checkboard background"):
-        set_rect(210, 210, 100, 100, WHITE)
+        fb.set_rect(210, 210, 100, 100, WHITE)
 
     with performance_log("Checkboard dots"):
         for y in range(210, 310, 2):
             for x in range(210, 310, 2):
-                set_pixel(x, y, BLACK)
+                fb.set_pixel(x, y, BLACK)
 
     with performance_log("Screen Update"):
-        update(210, 210, 310, 310, WaveformMode.Mono)
+        fb.update(210, 210, 310, 310, WaveformMode.Mono)
 
     with performance_log("Draw text"):
-        draw_text(800, 800, 100, 100, "Hello World!")
+        fb.draw_text(800, 800, 100, 100, "Hello World!")
 
     with performance_log("Screen Update"):
-        update(800, 800, 100, 100, WaveformMode.HighQualityGrayscale)
+        fb.update(800, 800, 100, 100, WaveformMode.HighQualityGrayscale)
 
 with performance_log("Save text from framebuffer"):
-    image = to_image(800, 800, 100, 100)
+    image = fb.to_image(800, 800, 100, 100)
     image.save("/tmp/py.text.png")
 
 with performance_log("Save entire framebuffer"):
-    image = to_image()
+    image = fb.to_image()
     image.save("/tmp/py.fb.png")
 
 image = Image.open("/tmp/py.fb.png")
 with performance_log("Replace framebuffer with contents of image"):
-    draw_image(0, 0, image)
+    fb.draw_image(0, 0, image)
 
-update_full(WaveformMode.HighQualityGrayscale)
-
-close_mmap_framebuffer()
+fb.update_full(WaveformMode.HighQualityGrayscale)
+fb.release()
 
 if FAILED:
     sys.exit(1)

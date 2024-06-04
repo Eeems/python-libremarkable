@@ -29,9 +29,7 @@ from evdev.ecodes import SYN_MT_REPORT
 from selectors import DefaultSelector
 from selectors import EVENT_READ
 
-
-from ._framebuffer import framebuffer_width
-from ._framebuffer import framebuffer_height
+from . import _framebuffer as fb
 
 from ._device import DeviceType
 from ._device import current as deviceType
@@ -103,7 +101,7 @@ class TouchEvent(Event):
         if deviceType == DeviceType.RM1:
             x = 1 - x
 
-        maxX, maxY = framebuffer_width() - 1, framebuffer_height() - 1
+        maxX, maxY = fb.width() - 1, fb.height() - 1
         return int(x * maxX), int(y * maxY)
 
     @property
@@ -141,7 +139,7 @@ class WacomEvent(Event):
         if deviceType in (DeviceType.RM1, DeviceType.RM2):
             x, y = _rotate((x, y), center=(0.5, 0.5), angle=270)
 
-        maxX, maxY = framebuffer_width() - 1, framebuffer_height() - 1
+        maxX, maxY = fb.width() - 1, fb.height() - 1
         return int(x * maxX), int(y * maxY)
 
     @property

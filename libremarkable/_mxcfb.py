@@ -388,6 +388,10 @@ def update(data: mxcfb_update_data) -> None:
         raise MXCFBException(res)
 
 
+def path() -> str:
+    return "/dev/fb0"
+
+
 def wait(marker: int) -> None:
     data = mxcfb_update_marker_data()
     data.update_marker = marker
