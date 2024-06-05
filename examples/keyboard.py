@@ -22,7 +22,7 @@ def nextLine():
     global x, y, fontHeight
     x = 0
     y += fontHeight
-    if y >= fb.height():
+    if y + fontHeight >= fb.height():
         y = 0
 
 
