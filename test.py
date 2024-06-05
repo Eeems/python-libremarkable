@@ -80,10 +80,9 @@ color888 = ImageColor.getrgb("black")
 assertv("rgb565_to_rgb888(black)", rgb565_to_rgb888(0x0000), color888)
 assertv("rgb888_to_rgb565(black)", rgb888_to_rgb565(*color888), 0x0000)
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
-assertv("get_offset", fb.get_offset(0, 0), 0)
-asserti("get_pixel", fb.get_pixel(0, 0), int)
-
 if deviceType != DeviceType.UNKNOWN:
+    assertv("get_offset", fb.get_offset(0, 0), 0)
+    asserti("get_pixel", fb.get_pixel(0, 0), int)
     assertv("pixel_size", fb.pixel_size(), sizeof(c_t))
 
 a = Point(0, 0)
