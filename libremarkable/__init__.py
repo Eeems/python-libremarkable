@@ -10,6 +10,7 @@ from ._input import DEFAULT_KEYMAP
 
 from ._framebuffer import FrameBuffer
 from ._framebuffer import WaveformMode
+from ._framebuffer import DEFAULT_FONT_SIZE
 
 from ._color import color_t
 
@@ -28,4 +29,5 @@ __all__ = [
     "WaveformMode",
     "color_t",
     "DEFAULT_KEYMAP",
+    "DEFAULT_FONT_SIZE",
 ]

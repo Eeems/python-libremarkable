@@ -33,8 +33,7 @@ from ._mxcfb import WaveformMode
 from ._mxcfb import UPDATE_MODE_PARTIAL
 from ._mxcfb import UPDATE_MODE_FULL
 from ._mxcfb import mxcfb_update_data
-
-# from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
+from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
 
 IMAGE_MODE = "I;16"
 DEFAULT_FONT_SIZE = 24
@@ -181,7 +180,7 @@ class FrameBuffer:
         data.update_region.height = height
         data.waveform_mode = waveform
         data.update_mode = UPDATE_MODE_PARTIAL if partial else UPDATE_MODE_FULL
-        # data.temp = TEMP_USE_REMARKABLE_DRAW
+        data.temp = TEMP_USE_REMARKABLE_DRAW
         data.update_marker = marker
         implementation().update(data)
         if sync:
@@ -337,7 +336,9 @@ class FrameBuffer:
             # TODO - handle when IMAGE_MODE has more bands
             color = color.value
 
-        ImageDraw.Draw(image).text(
+        d = ImageDraw.Draw(image)
+        d.fontmode = "L"
+        d.text(
             (0, 0),
             text,
             color,
@@ -365,7 +366,9 @@ class FrameBuffer:
             # TODO - handle when IMAGE_MODE has more bands
             color = color.value
 
-        ImageDraw.Draw(image).multiline_text(
+        d = ImageDraw.Draw(image)
+        d.fontmode = "L"
+        d.multiline_text(
             (0, 0),
             text,
             color,
