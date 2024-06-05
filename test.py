@@ -18,7 +18,7 @@ from libremarkable import deviceType
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 
 
-from libremarkable._color import c_t
+from libremarkable._color import color_t
 from libremarkable._color import rgb565_to_rgb888
 from libremarkable._color import rgb888_to_rgb565
 
@@ -83,7 +83,7 @@ assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
 if deviceType != DeviceType.UNKNOWN:
     assertv("get_offset", fb.get_offset(0, 0), 0)
     asserti("get_pixel", fb.get_pixel(0, 0), int)
-    assertv("pixel_size", fb.pixel_size(), sizeof(c_t))
+    assertv("pixel_size", fb.pixel_size(), sizeof(color_t))
 
 a = Point(0, 0)
 b = Point(10, 10)

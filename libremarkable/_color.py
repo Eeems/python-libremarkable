@@ -1,4 +1,4 @@
-from ctypes import c_ushort as c_t  # Aliased to allow changing easily
+from ctypes import c_ushort as color_t  # Aliased to allow changing easily
 
 from PIL import ImageColor
 
@@ -50,5 +50,5 @@ def rgb565_to_rgb888(color: int) -> tuple[int]:
     return _rgb5_to_8_lut[r], _rgb6_to_8_lut[g], _rgb5_to_8_lut[b]
 
 
-def getrgb(color: str) -> c_t:
-    return c_t(rgb888_to_rgb565(*ImageColor.getrgb(color)))
+def getrgb(color: str) -> color_t:
+    return color_t(rgb888_to_rgb565(*ImageColor.getrgb(color)))

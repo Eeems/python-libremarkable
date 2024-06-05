@@ -23,7 +23,7 @@ from PIL import ImageFont
 from . import _mxcfb
 from . import _rm2fb
 
-from ._color import c_t
+from ._color import color_t
 from ._color import getrgb
 
 from ._device import DeviceType
@@ -136,7 +136,7 @@ class FrameBuffer:
             _fb = {
                 "f": f,
                 "mm": mm,
-                "data": (c_t * int(size / sizeof(c_t))).from_buffer(mm),
+                "data": (color_t * int(size / sizeof(color_t))).from_buffer(mm),
                 "offset": offset,
                 "image": Image.frombuffer(
                     IMAGE_MODE,
@@ -218,7 +218,7 @@ class FrameBuffer:
         return cls.get_row_offset(y) + x + cls.x_offset()
 
     @classmethod
-    def set_pixel(cls, x: int, y: int, color: c_t | str) -> None:
+    def set_pixel(cls, x: int, y: int, color: color_t | str) -> None:
         if isinstance(color, str):
             color = cls.getcolor(color)
 
@@ -229,13 +229,13 @@ class FrameBuffer:
         return _ensure_fb()["data"][cls.get_offset(x, y)]
 
     @classmethod
-    def set_row(cls, x: int, y: int, width: int, color: c_t | str) -> None:
+    def set_row(cls, x: int, y: int, width: int, color: color_t | str) -> None:
         assert width > 0
         assert x + width <= cls.width()
         if isinstance(color, str):
             color = cls.getcolor(color)
 
-        data = (c_t * width).from_buffer(bytearray(color) * width)
+        data = (color_t * width).from_buffer(bytearray(color) * width)
         _set_line_to_data(x, y, data)
 
     @classmethod
@@ -243,7 +243,7 @@ class FrameBuffer:
         return _ensure_fb()["data"][cls.get_offset(x, y) : cls.get_offset(x + width, y)]
 
     @classmethod
-    def set_col(cls, x: int, y: int, height: int, color: c_t | str) -> None:
+    def set_col(cls, x: int, y: int, height: int, color: color_t | str) -> None:
         assert height
         assert x + height <= height()
         if isinstance(color, str):
@@ -259,7 +259,7 @@ class FrameBuffer:
         top: int,
         width: int,
         height: int,
-        color: c_t | str,
+        color: color_t | str,
     ) -> None:
         assert 0 <= left < cls.width(), f"left of {left} is invalid"
         assert 0 <= top < cls.height(), f"top of {top} is invalid"
@@ -268,12 +268,12 @@ class FrameBuffer:
         if isinstance(color, str):
             color = cls.getcolor(color)
 
-        data = (c_t * width).from_buffer(bytearray(color) * width)
+        data = (color_t * width).from_buffer(bytearray(color) * width)
         for y in range(top, top + height):
             _set_line_to_data(left, y, data)
 
     @classmethod
-    def set_color(cls, color: c_t | str) -> None:
+    def set_color(cls, color: color_t | str) -> None:
         if isinstance(color, str):
             color = cls.getcolor(color)
 
@@ -286,7 +286,7 @@ class FrameBuffer:
         top: int,
         right: int,
         bottom: int,
-        color: c_t | str,
+        color: color_t | str,
         lineSize: int = 1,
     ) -> None:
         if isinstance(color, str):
@@ -312,7 +312,9 @@ class FrameBuffer:
         if image.mode != IMAGE_MODE:
             image = image.convert(IMAGE_MODE)
 
-        data = (c_t * (image.width * image.height)).from_buffer_copy(image.tobytes())
+        data = (color_t * (image.width * image.height)).from_buffer_copy(
+            image.tobytes()
+        )
         for y in range(0, image.height):
             _set_line_to_data(left, top + y, data[y * width : y * width + width])
 
@@ -324,7 +326,7 @@ class FrameBuffer:
         width: int,
         height: int,
         text: str,
-        color: c_t | str = "black",
+        color: color_t | str = "black",
         fontSize: int = DEFAULT_FONT_SIZE,
     ):
         image = cls.to_image(left, top, width, height)
@@ -351,7 +353,7 @@ class FrameBuffer:
         width: int,
         height: int,
         text: str,
-        color: c_t | str = "black",
+        color: color_t | str = "black",
         fontSize: int = DEFAULT_FONT_SIZE,
         align: str = "left",
     ):
@@ -395,11 +397,11 @@ class FrameBuffer:
         return _ensure_fb()["image"].crop((left, top, left + width, top + height))
 
     @staticmethod
-    def getcolor(name_or_hex: str) -> c_t:
+    def getcolor(name_or_hex: str) -> color_t:
         return getrgb(name_or_hex)
 
     @classmethod
-    def __getitem__(cls, key: int | slice | tuple[int, int]) -> c_t:
+    def __getitem__(cls, key: int | slice | tuple[int, int]) -> color_t:
         f = _ensure_fb()
         if isinstance(key, tuple):
             x, y = key
@@ -433,11 +435,11 @@ class FrameBuffer:
     def __setitem__(
         cls,
         key: int | slice | tuple[int, int],
-        value: c_t | str | Iterable[c_t] | Iterable[str],
+        value: color_t | str | Iterable[color_t] | Iterable[str],
     ) -> None:
         f = _ensure_fb()
         if isinstance(key, tuple):
-            assert isinstance(value, c_t) or isinstance(value, str)
+            assert isinstance(value, color_t) or isinstance(value, str)
             x, y = key
             cls.set_pixel(x, y, value)
 
@@ -465,7 +467,7 @@ class FrameBuffer:
                 startValueOffset += size
 
         elif isinstance(key, int):
-            assert isinstance(value, c_t) or isinstance(value, str)
+            assert isinstance(value, color_t) or isinstance(value, str)
             y = int(key / cls.width())
             f["data"][cls.get_offset(key - y, y)] = value
 
@@ -481,11 +483,11 @@ class FrameBuffer:
         return cls.width() * cls.height()
 
     @classmethod
-    def __contains__(cls, color: c_t | str | int) -> bool:
+    def __contains__(cls, color: color_t | str | int) -> bool:
         if isinstance(color, str):
             color = cls.getcolor(color)
 
-        if isinstance(color, c_t):
+        if isinstance(color, color_t):
             color = color.value
 
         for y in range(0, cls.height()):
@@ -495,6 +497,8 @@ class FrameBuffer:
         return False
 
     @classmethod
-    def draw_line(cls, x1: int, y1: int, x2: int, y2: int, color: c_t | str) -> None:
+    def draw_line(
+        cls, x1: int, y1: int, x2: int, y2: int, color: color_t | str
+    ) -> None:
         for x, y in bresenham(x1, y1, x2, y2):
             cls.set_pixel(x, y, color)
