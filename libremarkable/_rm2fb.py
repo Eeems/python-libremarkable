@@ -83,15 +83,18 @@ if msqid < 0:
 
 
 @overload
-def send(data: wait_sem_data) -> None: ...
+def send(data: wait_sem_data) -> None:
+    pass
 
 
 @overload
-def send(data: xochitl_data) -> None: ...
+def send(data: xochitl_data) -> None:
+    pass
 
 
 @overload
-def send(data: mxcfb_update_data) -> None: ...
+def send(data: mxcfb_update_data) -> None:
+    pass
 
 
 def send(data):

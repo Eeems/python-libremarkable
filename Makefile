@@ -212,7 +212,7 @@ lint-fix: $(VENV_BIN_ACTIVATE)
 
 format: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff format --check
+	python -m ruff format --diff
 
 format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \

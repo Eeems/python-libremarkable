@@ -5,36 +5,27 @@
 # nuitka-project: --lto=yes
 
 import sys
-import time
+import difflib
 
 from ctypes import sizeof
 
-from contextlib import contextmanager
-
-from PIL import Image
 from PIL import ImageColor
 
-from libremarkable import deviceType
 from libremarkable import FrameBuffer as fb
 
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 
-from libremarkable._framebuffer import WaveformMode
 
 from libremarkable._color import c_t
 from libremarkable._color import rgb565_to_rgb888
 from libremarkable._color import rgb888_to_rgb565
 
+from libremarkable.geometry import Point
+from libremarkable.geometry import Rect
+from libremarkable.geometry import Region
+
 
 FAILED = False
-
-
-@contextmanager
-def performance_log(msg: str = ""):
-    start = time.perf_counter_ns()
-    yield
-    end = time.perf_counter_ns()
-    print(f"{msg}: {(end - start) / 1000000}ms")
 
 
 def assertv(name, value, expected):
@@ -46,7 +37,24 @@ def assertv(name, value, expected):
 
     FAILED = True
     print("fail")
-    print(f"  {value} != {expected}")
+    for diff in difflib.ndiff(str(expected).splitlines(), str(value).splitlines()):
+        print(f"  {diff}")
+
+
+def asserta(name, value, expected):
+    global FAILED
+    print(f"Testing {name}: ", end="")
+    if value == expected:
+        print("pass")
+        return
+
+    FAILED = True
+    print("fail")
+    for diff in difflib.ndiff(
+        [str(x) for x in expected],
+        [str(x) for x in value],
+    ):
+        print(f"  {diff}")
 
 
 def asserti(name, value, expected):
@@ -74,66 +82,123 @@ assertv("pixel_size", fb.pixel_size(), sizeof(c_t))
 assertv("get_offset", fb.get_offset(0, 0), 0)
 asserti("get_pixel", fb.get_pixel(0, 0), int)
 
-print(f"Device Type: {deviceType}")
-print(f"FrameBuffer path: {fb.path()}")
-print(f"Size: {fb.size()}")
-print(f"Width: {fb.width()}")
-print(f"Height: {fb.height()}")
+x, y = Point(10, 10)
+
+assertv("x, y = Point(10, 10)", (x, y), (10, 10))
+
+a = Rect(0, 0, 1, 1)
+b = Rect(0.5, 0.5, 1.5, 1.5)
+assertv(f"{a} & {b}", a & b, Rect(0.5, 0.5, 1, 1))
+asserta(
+    f"{a} - {b}",
+    list(a - b),
+    [
+        Rect(0, 0, 0.5, 0.5),
+        Rect(0, 0.5, 0.5, 1),
+        Rect(0.5, 0, 1, 0.5),
+    ],
+)
+
+b = Rect(0.25, 0.25, 1.25, 0.75)
+assertv(f"{a} & {b}", a & b, Rect(0.25, 0.25, 1, 0.75))
+asserta(
+    f"{a} - {b}",
+    list(a - b),
+    [
+        Rect(0, 0, 0.25, 0.25),
+        Rect(0, 0.25, 0.25, 0.75),
+        Rect(0, 0.75, 0.25, 1),
+        Rect(0.25, 0, 1, 0.25),
+        Rect(0.25, 0.75, 1, 1),
+    ],
+)
+
+b = Rect(0.25, 0.25, 0.75, 0.75)
+assertv(f"{a} & {b}", a & b, Rect(0.25, 0.25, 0.75, 0.75))
+asserta(
+    f"{a} - {b}",
+    list(a - b),
+    [
+        Rect(0, 0, 0.25, 0.25),
+        Rect(0, 0.25, 0.25, 0.75),
+        Rect(0, 0.75, 0.25, 1),
+        Rect(0.25, 0, 0.75, 0.25),
+        Rect(0.25, 0.75, 0.75, 1),
+        Rect(0.75, 0, 1, 0.25),
+        Rect(0.75, 0.25, 1, 0.75),
+        Rect(0.75, 0.75, 1, 1),
+    ],
+)
+
+b = Rect(5, 5, 10, 10)
+assertv(f"{a} & {b}", a & b, None)
+asserta(
+    f"{a} - {b}",
+    list(a - b),
+    [
+        Rect(0, 0, 1, 1),
+    ],
+)
+
+b = Rect(-5, -5, 10, 10)
+assertv(f"{a} & {b}", a & b, Rect(0, 0, 1, 1))
+asserta(f"{a} - {b}", list(a - b), [])
+
+a = Region()
+b = Rect(0, 0, 1, 1)
+asserta(
+    f"{a} + {b}",
+    list(a + b),
+    [
+        Rect(0, 0, 1, 1),
+    ],
+)
+
+a = Region(Rect(5, 5, 10, 10))
+b = Rect(5, 5, 10, 10)
+asserta(f"{a} - {b}", list(a - b), [])
+
+a = Region(Rect(5, 5, 10, 10))
+b = Rect(5, 5, 20, 20)
+asserta(
+    f"{a} + {b}",
+    list(a + b),
+    [
+        # Rect(5, 5, 20, 20), # This would be ideal after adding merging
+        Rect(5, 5, 10, 10),
+        Rect(10, 5, 20, 10),
+        Rect(5, 10, 10, 20),
+        Rect(10, 10, 20, 20),
+    ],
+)
+
+a = Region(Rect(5, 5, 10, 10))
+b = Region(
+    Rect(0, 5, 20, 10),
+    Rect(5, 0, 10, 20),
+)
+asserta(
+    f"{a} + {b}",
+    list(a + b),
+    [
+        # Rect(5, 5, 20, 20), # This would be ideal after adding merging
+        Rect(10, 5, 20, 10),
+        Rect(5, 0, 10, 5),
+        Rect(5, 10, 10, 20),
+        Rect(5, 5, 10, 10),
+        Rect(0, 5, 5, 10),
+    ],
+)
 
 
-with performance_log("Init to white"):
-    fb.set_color("white")
-
-with performance_log("Screen Update"):
-    fb.update_full(WaveformMode.HighQualityGrayscale, sync=True)
-
-with performance_log("Total"):
-    with performance_log("Black Rectangle"):
-        fb.set_rect(10, 10, 500, 500, "black")
-
-    with performance_log("Border"):
-        fb.draw_rect(6, 6, 514, 514, "black", lineSize=3)
-
-    with performance_log("Screen Update"):
-        fb.update(0, 0, 520, 520, WaveformMode.Mono)
-
-    with performance_log("Checkboard background"):
-        fb.set_rect(210, 210, 100, 100, "white")
-
-    with performance_log("Checkboard dots"):
-        for y in range(210, 310, 2):
-            for x in range(210, 310, 2):
-                fb.set_pixel(x, y, "black")
-
-    with performance_log("Screen Update"):
-        fb.update(210, 210, 310, 310, WaveformMode.Mono)
-
-    with performance_log("Draw text"):
-        fb.draw_text(800, 800, 150, 100, "Hello World!")
-
-    with performance_log("Screen Update"):
-        fb.update(800, 800, 150, 100, WaveformMode.HighQualityGrayscale)
-
-    with performance_log("Draw multiline text"):
-        fb.draw_text(800, 900, 100, 100, "This is\nMultiline!")
-
-    with performance_log("Screen Update"):
-        fb.update(800, 900, 100, 100, WaveformMode.HighQualityGrayscale)
-
-with performance_log("Save text from framebuffer"):
-    image = fb.to_image(800, 800, 150, 100)
-    image.save("/tmp/py.text.png")
-
-with performance_log("Save entire framebuffer"):
-    image = fb.to_image()
-    image.save("/tmp/py.fb.png")
-
-image = Image.open("/tmp/py.fb.png")
-with performance_log("Replace framebuffer with contents of image"):
-    fb.draw_image(0, 0, image)
-
-fb.update_full(WaveformMode.HighQualityGrayscale)
-fb.release()
+a = Region(
+    Rect(10, 5, 20, 10),
+    Rect(5, 0, 10, 5),
+    Rect(5, 10, 10, 20),
+    Rect(5, 5, 10, 10),
+    Rect(0, 5, 5, 10),
+)
+assertv(f"{a}.boundingRect", a.boundingRect, Rect(0, 0, 20, 20))
 
 if FAILED:
     sys.exit(1)
