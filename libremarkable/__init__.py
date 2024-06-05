@@ -6,11 +6,13 @@ from ._input import Event
 from ._input import TouchEvent
 from ._input import WacomEvent
 from ._input import KeyEvent
+from ._input import DEFAULT_KEYMAP
 
 from ._framebuffer import FrameBuffer
 from ._framebuffer import WaveformMode
 
 from ._color import color_t
+
 
 FrameBuffer = FrameBuffer()  # Must be done to expose __setitem__
 
@@ -25,4 +27,5 @@ __all__ = [
     "FrameBuffer",
     "WaveformMode",
     "color_t",
+    "DEFAULT_KEYMAP",
 ]

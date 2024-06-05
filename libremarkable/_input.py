@@ -29,6 +29,8 @@ from evdev.ecodes import BTN_TOOL_PEN
 from evdev.ecodes import SYN_DROPPED
 from evdev.ecodes import SYN_REPORT
 from evdev.ecodes import SYN_MT_REPORT
+from evdev.ecodes import KEY_LEFTSHIFT
+from evdev.ecodes import KEY_RIGHTSHIFT
 
 from selectors import DefaultSelector
 from selectors import EVENT_READ
@@ -37,6 +39,8 @@ from ._framebuffer import FrameBuffer as fb
 
 from ._device import DeviceType
 from ._device import current as deviceType
+
+from ._keymap import keymap as DEFAULT_KEYMAP
 
 
 def _rotate(
@@ -257,6 +261,8 @@ class WacomEvent(Event):
 
 
 class KeyEvent(Event):
+    keymap: dict[int, tuple[str | None, str | None]] = DEFAULT_KEYMAP
+
     def __init__(self, device, state):
         super().__init__(device, state)
         # TODO - sort out key states
@@ -269,6 +275,14 @@ class KeyEvent(Event):
             f"{' repeat ' if self.is_repeat else ''}"
             f" rawEvents={len(self.rawEvents)})"
         )
+
+    @property
+    def keycode(self) -> int | None:
+        for e in self.rawEvents:
+            if e.type == EV_KEY:
+                return e.code
+
+        return None
 
     @property
     def pressed(self) -> set[int]:
@@ -312,6 +326,15 @@ class KeyEvent(Event):
                 return True
 
         return False
+
+    @property
+    def is_shift(self) -> bool:
+        pressed = self.pressed
+        return KEY_LEFTSHIFT in pressed or KEY_RIGHTSHIFT in pressed
+
+    @property
+    def text(self) -> str | None:
+        return self.keymap[self.keycode][int(self.is_shift)]
 
 
 class Input:
