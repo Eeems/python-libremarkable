@@ -146,7 +146,8 @@ $(VENV_BIN_ACTIVATE):
 	python -m pip install \
 	    --extra-index-url=https://wheels.eeems.codes/ \
 	    ruff \
-	    build
+	    build \
+        -r requirements.txt
 
 dist/libremarkable-${VERSION}.tar.gz: $(VENV_BIN_ACTIVATE) $(OBJ)
 	. $(VENV_BIN_ACTIVATE); \
@@ -171,10 +172,14 @@ deploy: dist/libremarkable-${VERSION}-py3-none-any.whl
 install: deploy
 	echo -e "$$INSTALL_SCRIPT" | ssh root@10.11.99.1 bash -le
 
-test: lint format install
+test-device: lint format install
 	cat test.py \
 	| ssh root@10.11.99.1 \
 	  "bash -ec 'PATH=${PATH} /opt/bin/python -u'"
+
+test: lint format $(VENV_BIN_ACTIVATE)
+	. $(VENV_BIN_ACTIVATE); \
+	python test.py
 
 dist/test.bin: $(shell find libremarkable -type f) test.py
 	docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
@@ -219,4 +224,4 @@ format-fix: $(VENV_BIN_ACTIVATE)
 	python -m ruff format
 
 
-.PHONY: clean install test deploy test-executable deploy-executable lint format _ruff wheel srcdist
+.PHONY: clean install test deploy test-device test-executable deploy-executable lint format _ruff wheel srcdist

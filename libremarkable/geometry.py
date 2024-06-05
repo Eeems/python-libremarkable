@@ -21,6 +21,9 @@ class Point:
         yield self.x
         yield self.y
 
+    def __lt__(self, point: Point) -> bool:
+        return tuple(self) < tuple(point)
+
     def toInt(self) -> Point:
         return Point(int(self.x), int(self.y))
 
@@ -72,6 +75,9 @@ class Rect:
 
     def __bool__(self) -> bool:
         return self.area > 0
+
+    def __lt__(self, point: Point) -> bool:
+        return tuple(self) < tuple(point)
 
     @overload
     def __contains__(self, point: Point) -> bool:

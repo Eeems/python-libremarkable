@@ -320,6 +320,10 @@ _y_offset = None
 _pixel_width = None
 
 
+def setup():
+    pass
+
+
 def width() -> int:
     global _width
     if _width is None:

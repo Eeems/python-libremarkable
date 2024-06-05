@@ -12,6 +12,8 @@ from ctypes import sizeof
 from PIL import ImageColor
 
 from libremarkable import FrameBuffer as fb
+from libremarkable import DeviceType
+from libremarkable import deviceType
 
 from libremarkable._mxcfb import MXCFB_SEND_UPDATE
 
@@ -51,8 +53,8 @@ def asserta(name, value, expected):
     FAILED = True
     print("fail")
     for diff in difflib.ndiff(
-        sorted([str(x) for x in expected]),
-        sorted([str(x) for x in value]),
+        [str(x) for x in expected],
+        [str(x) for x in value],
     ):
         print(f"  {diff}")
 
@@ -78,9 +80,36 @@ color888 = ImageColor.getrgb("black")
 assertv("rgb565_to_rgb888(black)", rgb565_to_rgb888(0x0000), color888)
 assertv("rgb888_to_rgb565(black)", rgb888_to_rgb565(*color888), 0x0000)
 assertv("MXCFB_SEND_UPDATE", MXCFB_SEND_UPDATE, 0x4048462E)
-assertv("pixel_size", fb.pixel_size(), sizeof(c_t))
 assertv("get_offset", fb.get_offset(0, 0), 0)
 asserti("get_pixel", fb.get_pixel(0, 0), int)
+
+if deviceType != DeviceType.UNKNOWN:
+    assertv("pixel_size", fb.pixel_size(), sizeof(c_t))
+
+a = Point(0, 0)
+b = Point(10, 10)
+assertv(f"{a} < {b}", a < b, True)
+assertv(f"not {b} < {a}", b < a, False)
+a = Point(10, 10)
+b = Point(0, 0)
+assertv(f"{a} > {b}", a > b, True)
+assertv(f"not {b} > {a}", b > a, False)
+a = Point(0, 0)
+b = Point(0, 10)
+assertv(f"{a} < {b}", a < b, True)
+assertv(f"not {b} < {a}", b < a, False)
+a = Point(0, 10)
+b = Point(0, 0)
+assertv(f"{a} > {b}", a > b, True)
+assertv(f"not {b} > {a}", b > a, False)
+a = Point(0, 0)
+b = Point(10, 0)
+assertv(f"{a} < {b}", a < b, True)
+assertv(f"not {b} < {a}", b < a, False)
+a = Point(10, 0)
+b = Point(0, 0)
+assertv(f"{a} > {b}", a > b, True)
+assertv(f"not {b} > {a}", b > a, False)
 
 x, y = Point(10, 10)
 
@@ -134,21 +163,23 @@ b = Rect(5, 5, 10, 10)
 assertv(f"{a} & {b}", a & b, None)
 asserta(
     f"{a} - {b}",
-    list(a - b),
-    [
-        Rect(0, 0, 1, 1),
-    ],
+    sorted(a - b),
+    sorted(
+        [
+            Rect(0, 0, 1, 1),
+        ]
+    ),
 )
 
 b = Rect(-5, -5, 10, 10)
 assertv(f"{a} & {b}", a & b, Rect(0, 0, 1, 1))
-asserta(f"{a} - {b}", list(a - b), [])
+asserta(f"{a} - {b}", sorted(a - b), [])
 
 a = Region()
 b = Rect(0, 0, 1, 1)
 asserta(
     f"{a} + {b}",
-    list(a + b),
+    sorted(a + b),
     [
         Rect(0, 0, 1, 1),
     ],
@@ -156,20 +187,22 @@ asserta(
 
 a = Region(Rect(5, 5, 10, 10))
 b = Rect(5, 5, 10, 10)
-asserta(f"{a} - {b}", list(a - b), [])
+asserta(f"{a} - {b}", sorted(a - b), [])
 
 a = Region(Rect(5, 5, 10, 10))
 b = Rect(5, 5, 20, 20)
 asserta(
     f"{a} + {b}",
-    list(a + b),
-    [
-        # Rect(5, 5, 20, 20), # This would be ideal after adding merging
-        Rect(5, 5, 10, 10),
-        Rect(10, 5, 20, 10),
-        Rect(5, 10, 10, 20),
-        Rect(10, 10, 20, 20),
-    ],
+    sorted(a + b),
+    sorted(
+        [
+            # Rect(5, 5, 20, 20), # This would be ideal after adding merging
+            Rect(5, 5, 10, 10),
+            Rect(10, 5, 20, 10),
+            Rect(5, 10, 10, 20),
+            Rect(10, 10, 20, 20),
+        ]
+    ),
 )
 
 a = Region(Rect(5, 5, 10, 10))
@@ -179,15 +212,17 @@ b = Region(
 )
 asserta(
     f"{a} + {b}",
-    list(a + b),
-    [
-        # Rect(5, 5, 20, 20), # This would be ideal after adding merging
-        Rect(10, 5, 20, 10),
-        Rect(5, 0, 10, 5),
-        Rect(5, 10, 10, 20),
-        Rect(5, 5, 10, 10),
-        Rect(0, 5, 5, 10),
-    ],
+    sorted(a + b),
+    sorted(
+        [
+            # Rect(5, 5, 20, 20), # This would be ideal after adding merging
+            Rect(10, 5, 20, 10),
+            Rect(5, 0, 10, 5),
+            Rect(5, 10, 10, 20),
+            Rect(5, 5, 10, 10),
+            Rect(0, 5, 5, 10),
+        ]
+    ),
 )
 
 

@@ -75,11 +75,16 @@ class RM2FBException(Exception):
 
 
 IPC_CREAT = 512
-msg_q_id = 0x2257C
-msqid = msgget(msg_q_id, IPC_CREAT | 600)
-if msqid < 0:
-    err = os.strerror(get_errno())
-    raise RM2FBException(f"Failed to get message queue: {err}")
+MSG_Q_ID = 0x2257C
+msqid = -1
+
+
+def setup():
+    global msqid
+    msqid = msgget(MSG_Q_ID, IPC_CREAT | 600)
+    if msqid < 0:
+        err = os.strerror(get_errno())
+        raise RM2FBException(f"Failed to get message queue: {err}")
 
 
 @overload

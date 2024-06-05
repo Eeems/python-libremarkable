@@ -73,6 +73,9 @@ def _ensure_fb():
 
 
 class FrameBuffer:
+    def __init__(self):
+        implementation().setup()
+
     @staticmethod
     def path():
         return implementation().path()
