@@ -20,18 +20,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - uses: "actions/cache@v4"
-        id: "restore-cache"
-        with:
-          key: "venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('requirements.txt') }}"
-          path: |
-            .venv/
       - name: Lint
-        run: PYTHON=${{ steps.python.outputs.python-path }} make lint format
+        run: make lint format
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - name: Test
-        run: PYTHON=${{ steps.python.outputs.python-path }} make test
+        run: make test
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - name: Building package
-        run: PYTHON=${{ steps.python.outputs.python-path }} make srcdist wheel
+        run: make srcdist wheel
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@v4
         with:
           name: srcdist
@@ -55,16 +55,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - uses: "actions/cache@v4"
-        id: "restore-cache"
-        with:
-          key: "venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('requirements.txt') }}"
-          path: |
-            .venv/
       - name: Test
-        run: PYTHON=${{ steps.python.outputs.python-path }} make test
+        run: make test
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - name: Building package
-        run: PYTHON=${{ steps.python.outputs.python-path }} make srcdist wheel
+        run: make srcdist wheel
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.python }}
