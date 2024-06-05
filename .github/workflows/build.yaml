@@ -9,32 +9,59 @@ on:
     types: [released]
 permissions: read-all
 jobs:
-  build:
-    name: Make pip packages
+  srcdist:
+    name: Make srcdist
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - name: Setup Python
+        id: python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
       - name: Lint
         run: make lint format
+      - name: Building package
+        run: make srcdist wheel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: srcdist
+          path: dist/*
+          if-no-files-found: error
+  wheel:
+    name: Make ${{ matrix.python }} wheel
+    runs-on: ubuntu-latest
+    needs: [srcdist]
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - '3.12'
+          - '3.11'
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        id: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
       - name: Test
         run: make test
       - name: Building package
         run: make srcdist wheel
       - uses: actions/upload-artifact@v4
         with:
-          name: pip
+          name: wheel-${{ matrix.python }}
           path: dist/*
           if-no-files-found: error
   publish:
     name: Publish to PyPi
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [srcdist, wheel]
     if: github.repository == 'Eeems-Org/python-libremarkable' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
     permissions:
       id-token: write
@@ -45,8 +72,6 @@ jobs:
       - name: Download pip packages
         id: download
         uses: actions/download-artifact@v4
-        with:
-          name: pip
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
