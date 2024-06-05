@@ -28,8 +28,16 @@ jobs:
             .venv/
       - name: Lint
         run: make lint format
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+      - name: Test
+        run: make test
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - name: Building package
         run: make srcdist wheel
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@v4
         with:
           name: srcdist
@@ -61,8 +69,12 @@ jobs:
             .venv/
       - name: Test
         run: make test
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - name: Building package
         run: make srcdist wheel
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ matrix.python }}

@@ -140,8 +140,12 @@ ifeq ($(VENV_BIN_ACTIVATE),)
 VENV_BIN_ACTIVATE := .venv/bin/activate
 endif
 
+ifeq ($(PYTHON),)
+PYTHON := python
+endif
+
 $(VENV_BIN_ACTIVATE):
-	python -m venv .venv
+	$(PYTHON) -m venv .venv
 	. $(VENV_BIN_ACTIVATE); \
 	python -m pip install \
 	    --extra-index-url=https://wheels.eeems.codes/ \
