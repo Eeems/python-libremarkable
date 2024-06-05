@@ -89,29 +89,33 @@ a = Point(0, 0)
 b = Point(10, 10)
 assertv(f"{a} < {b}", a < b, True)
 assertv(f"not {b} < {a}", b < a, False)
+
 a = Point(10, 10)
 b = Point(0, 0)
 assertv(f"{a} > {b}", a > b, True)
 assertv(f"not {b} > {a}", b > a, False)
+
 a = Point(0, 0)
 b = Point(0, 10)
 assertv(f"{a} < {b}", a < b, True)
 assertv(f"not {b} < {a}", b < a, False)
+
 a = Point(0, 10)
 b = Point(0, 0)
 assertv(f"{a} > {b}", a > b, True)
 assertv(f"not {b} > {a}", b > a, False)
+
 a = Point(0, 0)
 b = Point(10, 0)
 assertv(f"{a} < {b}", a < b, True)
 assertv(f"not {b} < {a}", b < a, False)
+
 a = Point(10, 0)
 b = Point(0, 0)
 assertv(f"{a} > {b}", a > b, True)
 assertv(f"not {b} > {a}", b > a, False)
 
 x, y = Point(10, 10)
-
 assertv("x, y = Point(10, 10)", (x, y), (10, 10))
 
 a = Rect(0, 0, 1, 1)
