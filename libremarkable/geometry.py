@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Self
 from typing import Iterable
 from typing import overload
@@ -19,7 +21,7 @@ class Point:
         yield self.x
         yield self.y
 
-    def toInt(self) -> Self:
+    def toInt(self) -> Point:
         return Point(int(self.x), int(self.y))
 
 
@@ -76,7 +78,7 @@ class Rect:
         pass
 
     @overload
-    def __contains__(self, rect: Self) -> bool:
+    def __contains__(self, rect: Rect) -> bool:
         pass
 
     def __contains__(self, item) -> bool:
@@ -90,20 +92,23 @@ class Rect:
 
         raise NotImplementedError()
 
-    def __sub__(self, rect: Self) -> Iterable[Self]:
+    def __sub__(self, rect: Rect) -> Iterable[Rect]:
         return self.difference(rect)
 
-    def __and__(self, rect: Self) -> Self | None:
+    def __and__(self, rect: Rect) -> Rect | None:
         return self.intersect(rect)
 
-    def intersect(self, rect: Self) -> Self | None:
+    def __xor__(self, rect: Rect) -> Region:
+        return Region(self, rect) - self.intersect(rect)
+
+    def intersect(self, rect: Rect) -> Rect | None:
         x1 = max(min(self.left, self.right), min(rect.left, rect.right))
         y1 = max(min(self.top, self.bottom), min(rect.top, rect.bottom))
         x2 = min(max(self.left, self.right), max(rect.left, rect.right))
         y2 = min(max(self.top, self.bottom), max(rect.top, rect.bottom))
         return Rect(x1, y1, x2, y2) if x1 < x2 and y1 < y2 else None
 
-    def difference(self, rect: Self) -> Iterable[Self]:
+    def difference(self, rect: Rect) -> Iterable[Rect]:
         if not self.intersects(rect):
             yield self
             return
@@ -131,7 +136,7 @@ class Rect:
             if rect != intersection:
                 yield rect
 
-    def intersects(self, rect: Self) -> bool:
+    def intersects(self, rect: Rect) -> bool:
         return (
             rect.topLeft in self
             or rect.bottomRight in self
@@ -139,7 +144,7 @@ class Rect:
             or self.bottomRight in rect
         )
 
-    def toInt(self) -> Self:
+    def toInt(self) -> Rect:
         return Rect(int(self.left), int(self.top), int(self.right), int(self.bottom))
 
 
@@ -159,7 +164,7 @@ class Region(MutableSet[Rect]):
         pass
 
     @overload
-    def __contains__(self, region: Self) -> bool:
+    def __contains__(self, region: Region) -> bool:
         pass
 
     def __contains__(self, item) -> bool:
@@ -186,14 +191,14 @@ class Region(MutableSet[Rect]):
         return len(self.elements)
 
     @overload
-    def __iadd__(self, rect: Rect) -> None:
+    def __iadd__(self, rect: Rect) -> Self:
         pass
 
     @overload
-    def __iadd__(self, region: Self) -> None:
+    def __iadd__(self, region: Region) -> Self:
         pass
 
-    def __iadd__(self, item) -> None:
+    def __iadd__(self, item) -> Self:
         if isinstance(item, Rect):
             self.add(item)
             return self
@@ -207,18 +212,18 @@ class Region(MutableSet[Rect]):
         raise NotImplementedError()
 
     @overload
-    def __add__(self, rect: Rect) -> None:
+    def __add__(self, rect: Rect) -> Region:
         pass
 
     @overload
-    def __add__(self, rects: Iterable[Rect]) -> None:
+    def __add__(self, rects: Iterable[Rect]) -> Region:
         pass
 
     @overload
-    def __add__(self, region: Self) -> None:
+    def __add__(self, region: Region) -> Region:
         pass
 
-    def __add__(self, item) -> None:
+    def __add__(self, item) -> Region:
         region = Region(*self.elements)
         if isinstance(item, Rect):
             region.add(item)
@@ -233,14 +238,14 @@ class Region(MutableSet[Rect]):
         raise NotImplementedError()
 
     @overload
-    def __isub__(self, rect: Rect) -> None:
+    def __isub__(self, rect: Rect) -> Self:
         pass
 
     @overload
-    def __isub__(self, region: Self) -> None:
+    def __isub__(self, region: Region) -> Self:
         pass
 
-    def __isub__(self, item) -> None:
+    def __isub__(self, item) -> Self:
         if isinstance(item, Rect):
             self.discard(item)
             return self
@@ -254,14 +259,14 @@ class Region(MutableSet[Rect]):
         raise NotImplementedError()
 
     @overload
-    def __sub__(self, rect: Rect) -> None:
+    def __sub__(self, rect: Rect) -> Region:
         pass
 
     @overload
-    def __sub__(self, region: Self) -> None:
+    def __sub__(self, region: Region) -> Region:
         pass
 
-    def __sub__(self, item) -> None:
+    def __sub__(self, item) -> Region:
         region = Region(*self.elements)
         if isinstance(item, Rect):
             region.discard(item)
@@ -275,7 +280,7 @@ class Region(MutableSet[Rect]):
 
         raise NotImplementedError()
 
-    def add(self, rect: Rect):
+    def add(self, rect: Rect) -> None:
         if rect in self:
             return
 
@@ -300,15 +305,14 @@ class Region(MutableSet[Rect]):
             self.elements.add(rect)
 
         # TODO - merge rectangles that can be merged
-        #        reference: https://link.springer.com/content/pdf/10.1007/BF02189307.pdf
 
-    def discard(self, rect: Rect):
+    def discard(self, rect: Rect) -> None:
         for r in list(self):
             self.elements.discard(r)
             self += list(r - rect)
 
     @property
-    def toInt(self) -> Self:
+    def toInt(self) -> Region:
         return Region([x.toInt() for x in self])
 
     @property

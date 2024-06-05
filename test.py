@@ -51,8 +51,8 @@ def asserta(name, value, expected):
     FAILED = True
     print("fail")
     for diff in difflib.ndiff(
-        [str(x) for x in expected],
-        [str(x) for x in value],
+        sorted([str(x) for x in expected]),
+        sorted([str(x) for x in value]),
     ):
         print(f"  {diff}")
 
@@ -199,6 +199,19 @@ a = Region(
     Rect(0, 5, 5, 10),
 )
 assertv(f"{a}.boundingRect", a.boundingRect, Rect(0, 0, 20, 20))
+
+a = Rect(0, 0, 20, 20)
+b = Rect(10, 10, 20, 30)
+asserta(
+    f"{a} ^ {b}",
+    a ^ b,
+    Region(
+        Rect(0, 0, 10, 10),
+        Rect(0, 10, 10, 20),
+        Rect(10, 20, 20, 30),
+        Rect(10, 0, 20, 10),
+    ),
+)
 
 if FAILED:
     sys.exit(1)
