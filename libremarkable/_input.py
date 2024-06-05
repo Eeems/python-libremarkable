@@ -1,5 +1,7 @@
 import math
 
+from errno import ENODEV
+
 from copy import deepcopy
 
 from typing import Iterator
@@ -67,7 +69,7 @@ class Event:
         self.data = state["current"].get(state["slot"], {})
 
     def __repr__(self):
-        return f"<InputEvent rawEvents={len(self.rawEvents)}>"
+        return f"Event(rawEvents={len(self.rawEvents)})"
 
     def _get_abs_range(self, code) -> tuple[int, int]:
         info = self.device.absinfo(code)
@@ -100,8 +102,8 @@ class TouchEvent(Event):
 
     def __repr__(self):
         return (
-            f"<TouchEvent {self.trackingId} slot={self.slot} position={self.x},{self.y} "
-            f"pressure={self.pressure} rawEvents={len(self.rawEvents)}>"
+            f"TouchEvent({self.trackingId} slot={self.slot} position={self.x},{self.y} "
+            f"pressure={self.pressure} rawEvents={len(self.rawEvents)})"
         )
 
     def _screenPos(self, x: int | None, y: int | None) -> tuple[int, int] | None:
@@ -168,9 +170,9 @@ class WacomEvent(Event):
 
     def __repr__(self):
         return (
-            f"<WacomEvent position={self.x},{self.y} distance={self.distance} pressure={self.pressure} "
+            f"WacomEvent(position={self.x},{self.y} distance={self.distance} pressure={self.pressure} "
             f"tilt={self.tilt} {' hover ' if self.is_hover else ''}{' pressed ' if self.is_down else ''}"
-            f"rawEvents={len(self.rawEvents)}>"
+            f"rawEvents={len(self.rawEvents)})"
         )
 
     def _screenPos(self, x: int | None, y: int | None) -> tuple[int, int] | None:
@@ -254,13 +256,62 @@ class WacomEvent(Event):
         return not self.was_down and self.previousData.get((EV_KEY, BTN_TOOL_PEN), 0)
 
 
-def KeyEvent(Event):
+class KeyEvent(Event):
     def __init__(self, device, state):
         super().__init__(device, state)
         # TODO - sort out key states
 
     def __repr__(self):
-        return "<KeyEvent rawEvents={len(self.rawEvents)}>"
+        return (
+            f"KeyEvent(pressed={self.pressed or '{}'} released={self.released or '{}'}"
+            f"{' press ' if self.is_press else ''}"
+            f"{' release ' if self.is_release else ''}"
+            f"{' repeat ' if self.is_repeat else ''}"
+            f" rawEvents={len(self.rawEvents)})"
+        )
+
+    @property
+    def pressed(self) -> set[int]:
+        keys = set()
+        for k, v in self.data.items():
+            if k[0] == EV_KEY and v:
+                keys.add(k[1])
+
+        return keys
+
+    @property
+    def released(self) -> set[int]:
+        pressed = self.pressed
+        keys = set()
+        for k, v in self.previousData.items():
+            if k[0] == EV_KEY and v and k[1] not in pressed:
+                keys.add(k[1])
+
+        return keys
+
+    @property
+    def is_repeat(self) -> bool:
+        for e in self.rawEvents:
+            if e.type == EV_KEY and e.value == 2:
+                return True
+
+        return False
+
+    @property
+    def is_press(self) -> bool:
+        for e in self.rawEvents:
+            if e.type == EV_KEY and e.value == 1:
+                return True
+
+        return False
+
+    @property
+    def is_release(self) -> bool:
+        for e in self.rawEvents:
+            if e.type == EV_KEY and e.value == 0:
+                return True
+
+        return False
 
 
 class Input:
@@ -310,32 +361,44 @@ class Input:
     def rawEvents(
         cls, devices: list[InputDevice] = None, block: bool = False
     ) -> Iterator[tuple[InputDevice | None, list[InputEvent]]]:
-        # TODO - support new devices being added/removed dynamically (type folio)
         selector = DefaultSelector()
-        if devices is None:
-            devices = cls.devices()
-
-        for device in devices:
+        for device in devices if devices is not None else cls.devices():
             selector.register(device, EVENT_READ)
 
         events = {}
         while True:
-            for key, mask in selector.select(timeout=None if block else 0):
-                device = key.fileobj
-                for event in device.read():
-                    if device.path not in events.keys():
+            try:
+                for key, mask in selector.select(timeout=100 if block else 0):
+                    device = key.fileobj
+                    for event in device.read():
+                        if device.path not in events.keys():
+                            events[device.path] = []
+
+                        events[device.path].append(event)
+                        if event.type != EV_SYN:
+                            continue
+
+                        if event.code == SYN_DROPPED:
+                            events[device.path] = []
+                            continue
+
+                        yield device, events[device.path]
                         events[device.path] = []
 
-                    events[device.path].append(event)
-                    if event.type != EV_SYN:
-                        continue
+                # TODO - don't require another input event to register when a keyboard has been added again
+                if devices is None:
+                    # Add any newly added devices if we aren't filtering to a specific set of events
+                    for device in cls.devices():
+                        if device not in [
+                            k.fileobj for k in selector.get_map().values()
+                        ]:
+                            selector.register(device, EVENT_READ)
 
-                    if event.code == SYN_DROPPED:
-                        events[device.path] = []
-                        continue
+            except OSError as err:
+                if err.errno != ENODEV:
+                    raise
 
-                    yield device, events[device.path]
-                    events[device.path] = []
+                selector.unregister(device)
 
             if not block:
                 yield None, []
