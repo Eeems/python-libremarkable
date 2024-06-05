@@ -20,7 +20,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+      - uses: "actions/cache@v4"
+        id: "restore-cache"
+        with:
+          key: "venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('requirements.txt') }}"
+          path: |
+            .venv/
       - name: Lint
         run: make lint format
       - name: Building package
@@ -48,7 +53,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-          cache: 'pip'
+      - uses: "actions/cache@v4"
+        id: "restore-cache"
+        with:
+          key: "venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('requirements.txt') }}"
+          path: |
+            .venv/
       - name: Test
         run: make test
       - name: Building package
