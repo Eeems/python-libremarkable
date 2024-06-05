@@ -10,7 +10,7 @@ on:
 permissions: read-all
 jobs:
   check:
-    name: Check ${{ matrix.python }} wheel
+    name: Check on python ${{ matrix.python }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -34,13 +34,8 @@ jobs:
         run: make test
         env:
           PYTHON: ${{ steps.python.outputs.python-path }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheel-${{ matrix.python }}
-          path: dist/*
-          if-no-files-found: error
   build:
-    name: Make srcdist
+    name: Build
     runs-on: ubuntu-latest
     needs: [check]
     steps:
@@ -57,7 +52,7 @@ jobs:
           PYTHON: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@v4
         with:
-          name: srcdist
+          name: artifacts
           path: dist/*
           if-no-files-found: error
   publish:
@@ -74,6 +69,8 @@ jobs:
       - name: Download pip packages
         id: download
         uses: actions/download-artifact@v4
+        with:
+          name: artifacts
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
