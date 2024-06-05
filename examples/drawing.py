@@ -1,9 +1,8 @@
 from libremarkable import Input
 from libremarkable import WacomEvent
 from libremarkable import TouchEvent
-
 from libremarkable import FrameBuffer as fb
-from libremarkable._framebuffer import WaveformMode
+from libremarkable import WaveformMode
 
 fb.set_color("white")
 fb.update_full(WaveformMode.HighQualityGrayscale, sync=True)
