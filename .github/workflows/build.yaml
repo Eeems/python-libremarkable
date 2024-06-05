@@ -9,38 +9,9 @@ on:
     types: [released]
 permissions: read-all
 jobs:
-  srcdist:
-    name: Make srcdist
+  check:
+    name: Check ${{ matrix.python }} wheel
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the Git repository
-        uses: actions/checkout@v4
-      - name: Setup Python
-        id: python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Lint
-        run: make lint format
-        env:
-          PYTHON: ${{ steps.python.outputs.python-path }}
-      - name: Test
-        run: make test
-        env:
-          PYTHON: ${{ steps.python.outputs.python-path }}
-      - name: Building package
-        run: make srcdist wheel
-        env:
-          PYTHON: ${{ steps.python.outputs.python-path }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: srcdist
-          path: dist/*
-          if-no-files-found: error
-  wheel:
-    name: Make ${{ matrix.python }} wheel
-    runs-on: ubuntu-latest
-    needs: [srcdist]
     strategy:
       fail-fast: false
       matrix:
@@ -55,12 +26,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Test
-        run: make test
+      - name: Lint
+        run: make lint format
         env:
           PYTHON: ${{ steps.python.outputs.python-path }}
-      - name: Building package
-        run: make srcdist wheel
+      - name: Test
+        run: make test
         env:
           PYTHON: ${{ steps.python.outputs.python-path }}
       - uses: actions/upload-artifact@v4
@@ -68,10 +39,31 @@ jobs:
           name: wheel-${{ matrix.python }}
           path: dist/*
           if-no-files-found: error
+  build:
+    name: Make srcdist
+    runs-on: ubuntu-latest
+    needs: [check]
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        id: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Building package
+        run: make srcdist wheel
+        env:
+          PYTHON: ${{ steps.python.outputs.python-path }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: srcdist
+          path: dist/*
+          if-no-files-found: error
   publish:
     name: Publish to PyPi
     runs-on: ubuntu-latest
-    needs: [srcdist, wheel]
+    needs: [build]
     if: github.repository == 'Eeems-Org/python-libremarkable' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
     permissions:
       id-token: write
