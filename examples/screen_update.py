@@ -6,8 +6,7 @@ from PIL import Image
 
 from libremarkable import deviceType
 from libremarkable import FrameBuffer as fb
-
-from libremarkable._framebuffer import WaveformMode
+from libremarkable import WaveformMode
 
 
 @contextmanager
