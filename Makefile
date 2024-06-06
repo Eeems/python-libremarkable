@@ -174,7 +174,7 @@ deploy: dist/libremarkable-${VERSION}-py3-none-any.whl
 	rsync dist/libremarkable-${VERSION}-py3-none-any.whl root@10.11.99.1:/tmp
 
 install: deploy
-	echo -e "$$INSTALL_SCRIPT" | ssh root@10.11.99.1 bash -le
+	printf "%s\n" "$$INSTALL_SCRIPT" | ssh root@10.11.99.1 bash -le
 
 test-device: lint format install
 	cat test.py \
