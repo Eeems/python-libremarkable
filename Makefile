@@ -144,6 +144,8 @@ ifeq ($(PYTHON),)
 PYTHON := python
 endif
 
+REMOTE_PYTHON := ssh root@10.11.99.1 -- PATH=${PATH} /opt/bin/python -ttu
+
 $(VENV_BIN_ACTIVATE):
 	$(PYTHON) -m venv .venv
 	. $(VENV_BIN_ACTIVATE); \
@@ -177,9 +179,7 @@ install: deploy
 	printf "%s\n" "$$INSTALL_SCRIPT" | ssh root@10.11.99.1 bash -le
 
 test-device: lint format install
-	cat test.py \
-	| ssh root@10.11.99.1 \
-	  "bash -ec 'PATH=${PATH} /opt/bin/python -u'"
+	cat test.py | $(REMOTE_PYTHON)
 
 test: lint format $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
@@ -227,5 +227,19 @@ format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format
 
+$(wildcard examples/*.py):%: lint format install
+	cat $@ | $(REMOTE_PYTHON)
 
-.PHONY: clean install test deploy test-device test-executable deploy-executable lint format _ruff wheel srcdist
+.PHONY: \
+	clean \
+	install \
+	test \
+	deploy \
+	test-device \
+	test-executable \
+	deploy-executable \
+	lint \
+	format \
+	_ruff \
+	wheel \
+	srcdist
