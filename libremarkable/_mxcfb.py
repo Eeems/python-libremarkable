@@ -351,7 +351,7 @@ def virtual_width() -> int:
 def virtual_height() -> int:
     global _v_height
     if _v_height is None:
-        _v_height = get_var_screeninfo().xres_virtual
+        _v_height = get_var_screeninfo().yres_virtual
 
     return _v_height
 
