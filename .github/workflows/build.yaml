@@ -76,6 +76,10 @@ jobs:
           name: documentation
           path: dist/doc
           if-no-files-found: error
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/doc
   publish:
     name: Publish to PyPi
     runs-on: ubuntu-latest
