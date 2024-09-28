@@ -451,4 +451,4 @@ keymap = {
     KEY_ZOOMIN: (None, None),
     KEY_ZOOMOUT: (None, None),
     KEY_ZOOMRESET: (None, None),
-}
+}  #: The default keymap

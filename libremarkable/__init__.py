@@ -8,14 +8,14 @@ from ._input import WacomEvent
 from ._input import KeyEvent
 from ._input import DEFAULT_KEYMAP
 
-from ._framebuffer import FrameBuffer
+from ._framebuffer import FrameBuffer as _FrameBuffer
 from ._framebuffer import WaveformMode
 from ._framebuffer import DEFAULT_FONT_SIZE
 
 from ._color import color_t
 
-
-FrameBuffer = FrameBuffer()  # Must be done to expose __setitem__
+# Must be done to expose __setitem__
+FrameBuffer = _FrameBuffer()  #: Framebuffer instance
 
 __all__ = [
     "DeviceType",

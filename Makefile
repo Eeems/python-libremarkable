@@ -135,9 +135,16 @@ tar -czf /src/dist/test.tar.gz \
 endef
 export TAR_SCRIPT
 
-
 ifeq ($(VENV_BIN_ACTIVATE),)
 VENV_BIN_ACTIVATE := .venv/bin/activate
+endif
+
+ifeq ($(VENV_BIN_SPHINX),)
+VENV_BIN_SPHINX := .venv/bin/sphinx-build
+endif
+
+ifeq ($(VENV_BIN_SPHINX_AUTOBUILD),)
+VENV_BIN_SPHINX_AUTOBUILD := .venv/bin/sphinx-autobuild
 endif
 
 ifeq ($(PYTHON),)
@@ -146,14 +153,24 @@ endif
 
 REMOTE_PYTHON := ssh root@10.11.99.1 -- PATH=${PATH} /opt/bin/python -ttu
 
-$(VENV_BIN_ACTIVATE):
+$(VENV_BIN_ACTIVATE): requirements.txt
 	$(PYTHON) -m venv .venv
 	. $(VENV_BIN_ACTIVATE); \
 	python -m pip install \
 	    --extra-index-url=https://wheels.eeems.codes/ \
 	    ruff \
 	    build \
-        -r requirements.txt
+	    -r requirements.txt
+
+$(VENV_BIN_SPHINX): $(VENV_BIN_ACTIVATE) doc/requirements.txt
+	. $(VENV_BIN_ACTIVATE); \
+	python -m pip install \
+	    --extra-index-url=https://wheels.eeems.codes/ \
+	    ruff \
+	    build \
+	    -r doc/requirements.txt
+
+$(VENV_BIN_SPHINX_AUTOBUILD): $(VENV_BIN_SPHINX)
 
 dist/libremarkable-${VERSION}.tar.gz: $(VENV_BIN_ACTIVATE) $(OBJ)
 	. $(VENV_BIN_ACTIVATE); \
@@ -230,6 +247,16 @@ format-fix: $(VENV_BIN_ACTIVATE)
 $(wildcard examples/*.py):%: lint format install
 	cat $@ | $(REMOTE_PYTHON)
 
+doc: $(VENV_BIN_SPHINX)
+	$(VENV_BIN_SPHINX) -a -n -E -b html doc dist/doc
+
+doc-dev: $(VENV_BIN_SPHINX_AUTOBUILD)
+	$(VENV_BIN_SPHINX_AUTOBUILD) \
+	    --port=0 \
+	    --open-browser \
+	    --watch libremarkable \
+	    -a doc dist/doc
+
 .PHONY: \
 	clean \
 	install \
@@ -242,4 +269,6 @@ $(wildcard examples/*.py):%: lint format install
 	format \
 	_ruff \
 	wheel \
-	srcdist
+	srcdist \
+	doc \
+	doc-dev

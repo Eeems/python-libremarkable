@@ -34,10 +34,17 @@ class Waveform(IntEnum):
 
 
 class WaveformMode(IntEnum):
+    """Waveform mode to use during an update"""
+
+    #: Initialize the framebuffer
     Initialize = Waveform.INIT
+    #: Black and white mode
     Mono = Waveform.DU
+    #: Grayscale mode
     Grayscale = Waveform.GL16
+    #: High quality mode
     HighQualityGrayscale = Waveform.GC16
+    #: Highlight mode
     Highlight = Waveform.UNKNOWN
 
 

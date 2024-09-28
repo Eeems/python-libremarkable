@@ -35,8 +35,8 @@ from ._mxcfb import UPDATE_MODE_FULL
 from ._mxcfb import mxcfb_update_data
 from ._mxcfb import TEMP_USE_REMARKABLE_DRAW
 
-IMAGE_MODE = "I;16"
-DEFAULT_FONT_SIZE = 24
+IMAGE_MODE = "I;16"  #: Image mode used by framebuffer
+DEFAULT_FONT_SIZE = 24  #: Default font size
 
 _fb = None
 _marker = 0
@@ -72,54 +72,67 @@ def _ensure_fb():
 
 
 class FrameBuffer:
+    """Framebuffer"""
+
     def __init__(self):
         implementation().setup()
 
     @staticmethod
     def path():
+        """Path to framebuffer device"""
         return implementation().path()
 
     @classmethod
     def open(cls):
+        """Open the framebuffer"""
         return open(cls.path(), "r+b")
 
     @staticmethod
     def size():
+        """Get the size of the framebuffer in bytes"""
         size = implementation().getsize()
         assert size, "Framebuffer size is invalid"
         return size
 
     @staticmethod
     def width() -> int:
+        """Get the width of the framebufffer"""
         return implementation().width()
 
     @staticmethod
     def height() -> int:
+        """Get the height of the framebufffer"""
         return implementation().height()
 
     @staticmethod
     def pixel_size() -> int:
+        """Get the pixel size of the framebufffer in bytes"""
         return implementation().pixel_size()
 
     @staticmethod
     def virtual_width() -> int:
+        """Get the virtual width of the framebufffer"""
         return implementation().virtual_width()
 
     @staticmethod
     def virtual_height() -> int:
+        """Get the virtual height of the framebufffer"""
         return implementation().virtual_height()
 
     @staticmethod
     def x_offset() -> int:
+        """Get the x offset of the framebufffer"""
         return implementation().x_offset()
 
     @staticmethod
     def y_offset() -> int:
+        """Get the y offset of the framebufffer"""
         return implementation().y_offset()
 
     @classmethod
     @contextmanager
     def mmap(cls):
+        """memory map the framebuffer"""
         global _fb
         if _fb is None:
             f = cls.open()
@@ -148,6 +161,7 @@ class FrameBuffer:
 
     @staticmethod
     def release():
+        """Release the framebuffer"""
         global _fb
         if _fb is not None:
             _fb["image"].close()
@@ -169,6 +183,7 @@ class FrameBuffer:
         partial=True,
         sync=False,
     ) -> int:
+        """Update a portion of the screen with the contents of the framebuffer memory"""
         if marker is None:
             global _marker
             marker = _marker = _marker + 1
@@ -190,6 +205,7 @@ class FrameBuffer:
 
     @classmethod
     def update_full(cls, waveform: WaveformMode, marker: int = None, sync=False):
+        """Update the screen with the contents of the framebuffer memory"""
         cls.update(
             0,
             0,
@@ -203,21 +219,25 @@ class FrameBuffer:
 
     @staticmethod
     def wait(marker: int) -> None:
+        """Wait for an update to finish"""
         implementation().wait(marker)
 
     @classmethod
     def get_row_offset(cls, y: int) -> int:
+        """Get the offset of a row on the framebuffer"""
         assert 0 <= y <= cls.height()
         return (y + cls.y_offset()) * cls.virtual_width()
 
     @classmethod
     def get_offset(cls, x: int, y: int) -> int:
+        """Get the offset of a x,y on the framebuffer"""
         assert 0 <= x <= cls.width(), f"{x} not within bounds"
         assert 0 <= y <= cls.height(), f"{y} not within bounds"
         return cls.get_row_offset(y) + x + cls.x_offset()
 
     @classmethod
     def set_pixel(cls, x: int, y: int, color: color_t | str) -> None:
+        """Set a pixel in the framebuffer memory to a colour"""
         if isinstance(color, str):
             color = cls.getcolor(color)
 
@@ -225,10 +245,12 @@ class FrameBuffer:
 
     @classmethod
     def get_pixel(cls, x: int, y: int) -> int:
+        """Get the value for a pixel in the framebuffer memory"""
         return _ensure_fb()["data"][cls.get_offset(x, y)]
 
     @classmethod
     def set_row(cls, x: int, y: int, width: int, color: color_t | str) -> None:
+        """Set a row in the framebuffer memory to a colour"""
         assert width > 0
         assert x + width <= cls.width()
         if isinstance(color, str):
@@ -239,10 +261,12 @@ class FrameBuffer:
 
     @classmethod
     def get_row(cls, x: int, y: int, width: int) -> tuple[int]:
+        """Get the data for a row in the framebuffer memory"""
         return _ensure_fb()["data"][cls.get_offset(x, y) : cls.get_offset(x + width, y)]
 
     @classmethod
     def set_col(cls, x: int, y: int, height: int, color: color_t | str) -> None:
+        """Set a column in the framebuffer memory to a colour"""
         assert height
         assert x + height <= height()
         if isinstance(color, str):
@@ -260,6 +284,7 @@ class FrameBuffer:
         height: int,
         color: color_t | str,
     ) -> None:
+        """Set a rectangle in the framebuffer memory to a colour"""
         assert 0 <= left < cls.width(), f"left of {left} is invalid"
         assert 0 <= top < cls.height(), f"top of {top} is invalid"
         assert 0 < width <= cls.width() - left, f"width of {width} is invalid"
@@ -273,6 +298,7 @@ class FrameBuffer:
 
     @classmethod
     def set_color(cls, color: color_t | str) -> None:
+        """Set the framebuffer memory to a colour"""
         if isinstance(color, str):
             color = cls.getcolor(color)
 
@@ -288,6 +314,7 @@ class FrameBuffer:
         color: color_t | str,
         lineSize: int = 1,
     ) -> None:
+        """Draw a rectangle in the framebuffer memory"""
         if isinstance(color, str):
             color = cls.getcolor(color)
 
@@ -300,6 +327,7 @@ class FrameBuffer:
 
     @classmethod
     def draw_image(cls, left: int, top: int, image: Image) -> None:
+        """Draw an image into the framebufffer memory"""
         width = image.width
         height = image.height
 
@@ -328,6 +356,7 @@ class FrameBuffer:
         color: color_t | str = "black",
         fontSize: int = DEFAULT_FONT_SIZE,
     ):
+        """Draw text on the framebuffer memory"""
         image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
             color = ImageColor.getcolor(color, image.mode)
@@ -358,6 +387,7 @@ class FrameBuffer:
         fontSize: int = DEFAULT_FONT_SIZE,
         align: str = "left",
     ):
+        """Draw multiline text on the framebuffer memory"""
         image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
             color = ImageColor.getcolor(color, image.mode)
@@ -383,7 +413,8 @@ class FrameBuffer:
         top: int = 0,
         width: int = None,
         height: int = None,
-    ) -> Image:
+    ) -> Image.Image:
+        """Get an image of the framebuffer memory"""
         if width is None:
             width = cls.width()
 
@@ -401,10 +432,12 @@ class FrameBuffer:
 
     @staticmethod
     def getcolor(name_or_hex: str) -> color_t:
+        """Get the value for a colour name or hex"""
         return getrgb(name_or_hex)
 
     @classmethod
     def __getitem__(cls, key: int | slice | tuple[int, int]) -> color_t:
+        """Get data from the framebuffer memory"""
         f = _ensure_fb()
         if isinstance(key, tuple):
             x, y = key
@@ -440,6 +473,7 @@ class FrameBuffer:
         key: int | slice | tuple[int, int],
         value: color_t | str | Iterable[color_t] | Iterable[str],
     ) -> None:
+        """Set framebuffer memory"""
         f = _ensure_fb()
         if isinstance(key, tuple):
             assert isinstance(value, color_t) or isinstance(value, str)
@@ -479,14 +513,17 @@ class FrameBuffer:
 
     @classmethod
     def __iter__(cls) -> iter:
+        """Iterate through the framebuffer memory"""
         return iter(_ensure_fb()["data"])
 
     @classmethod
     def __len__(cls) -> int:
+        """Get the size of the framebuffer memory"""
         return cls.width() * cls.height()
 
     @classmethod
     def __contains__(cls, color: color_t | str | int) -> bool:
+        """Check to see if a colour is present in the framebuffer memory"""
         if isinstance(color, str):
             color = cls.getcolor(color)
 
@@ -503,5 +540,6 @@ class FrameBuffer:
     def draw_line(
         cls, x1: int, y1: int, x2: int, y2: int, color: color_t | str
     ) -> None:
+        """Draw a line between two points in the framebuffer memory"""
         for x, y in bresenham(x1, y1, x2, y2):
             cls.set_pixel(x, y, color)

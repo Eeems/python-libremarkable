@@ -66,11 +66,15 @@ def _rotate(
 
 
 class Event:
+    """Input event"""
+
     def __init__(self, device, state):
-        self.device = device
-        self.rawEvents = state["events"]
-        self.previousData = state["previous"].get(state["slot"], {})
-        self.data = state["current"].get(state["slot"], {})
+        self.device = device  #: Event device
+        self.rawEvents = state["events"]  #: Raw events
+        self.previousData = state["previous"].get(
+            state["slot"], {}
+        )  #: Previous event data
+        self.data = state["current"].get(state["slot"], {})  #: Current event data
 
     def __repr__(self):
         return f"Event(rawEvents={len(self.rawEvents)})"
@@ -99,6 +103,8 @@ class Event:
 
 
 class TouchEvent(Event):
+    """Touch Event"""
+
     def __init__(self, device, state):
         super().__init__(device, state)
         if self.previousTrackingId == -1:
@@ -123,50 +129,63 @@ class TouchEvent(Event):
 
     @property
     def x(self) -> float | None:
+        """x coordinate"""
         return self._get_abs_float(EV_ABS, ABS_MT_POSITION_X, None)
 
     @property
     def y(self) -> float | None:
+        """y coordinate"""
         return self._get_abs_float(EV_ABS, ABS_MT_POSITION_Y, None)
 
     @property
     def screenPos(self) -> tuple[int, int] | None:
+        """Screen coordinates"""
         return self._screenPos(self.x, self.y)
 
     @property
     def pressure(self) -> float | None:
+        """Touch pressure"""
         return self._get_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
 
     @property
     def slot(self) -> int:
+        """Touch slot"""
         return self.data.get((EV_ABS, ABS_MT_SLOT), 0)
 
     @property
     def trackingId(self) -> int | None:
+        """Tracking ID"""
         return self.data.get((EV_ABS, ABS_MT_TRACKING_ID), None)
 
     @property
     def previousX(self) -> float | None:
+        """Previous x coordinate"""
         return self._get_previous_abs_float(EV_ABS, ABS_MT_POSITION_X, None)
 
     @property
     def previousY(self) -> float | None:
+        """Previous y coordinate"""
         return self._get_previous_abs_float(EV_ABS, ABS_MT_POSITION_Y, None)
 
     @property
     def previousScreenPos(self) -> tuple[int, int] | None:
+        """Previous screen coordinates"""
         return self._screenPos(self.previousX, self.previousY)
 
     @property
     def previousPressure(self) -> float | None:
+        """Previous touch pressure"""
         return self._get_previous_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
 
     @property
     def previousTrackingId(self) -> int | None:
+        """Previous tracking ID"""
         return self.previousData.get((EV_ABS, ABS_MT_TRACKING_ID), None)
 
 
 class WacomEvent(Event):
+    """Tablet Event"""
+
     def __init__(self, device, state):
         super().__init__(device, state)
         if not self.was_down and not self.was_hover:
@@ -191,26 +210,32 @@ class WacomEvent(Event):
 
     @property
     def x(self) -> float | None:
+        """x coordinate"""
         return self._get_abs_float(EV_ABS, ABS_X, None)
 
     @property
     def y(self) -> float | None:
+        """y coordinate"""
         return self._get_abs_float(EV_ABS, ABS_Y, None)
 
     @property
     def screenPos(self) -> tuple[int, int] | None:
+        """screen coordinates"""
         return self._screenPos(self.x, self.y)
 
     @property
     def distance(self) -> float | None:
+        """Pen distance from screen"""
         return self._get_abs_float(EV_ABS, ABS_DISTANCE, None)
 
     @property
     def pressure(self) -> float | None:
+        """Pen pressure"""
         return self._get_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
 
     @property
     def tilt(self) -> tuple[int, int]:
+        """Pen tilt"""
         return (
             self._get_abs_float(EV_ABS, ABS_TILT_X, 0),
             self._get_abs_float(EV_ABS, ABS_TILT_Y, 0),
@@ -218,34 +243,42 @@ class WacomEvent(Event):
 
     @property
     def is_down(self) -> bool:
+        """If pen is touching the screen"""
         return bool(self.data.get((EV_KEY, BTN_TOUCH), 0))
 
     @property
     def is_hover(self) -> bool:
+        """If the pen is hovering over the screen"""
         return not self.is_down and self.data.get((EV_KEY, BTN_TOOL_PEN), 0)
 
     @property
     def previousX(self) -> float | None:
+        """Previous x coordinate"""
         return self._get_previous_abs_float(EV_ABS, ABS_X, None)
 
     @property
     def previousY(self) -> float | None:
+        """Previous y coordinate"""
         return self._get_previous_abs_float(EV_ABS, ABS_Y, None)
 
     @property
     def previousScreenPos(self) -> tuple[int, int] | None:
+        """Previous screen coordinates"""
         return self._screenPos(self.previousX, self.previousY)
 
     @property
     def previousDistance(self) -> float | None:
+        """Previous distance of pen from screen"""
         return self._get_previous_abs_float(EV_ABS, ABS_DISTANCE, None)
 
     @property
     def previousPressure(self) -> float | None:
+        """Previous pen pressure"""
         return self._get_previous_abs_float(EV_ABS, ABS_MT_PRESSURE, None)
 
     @property
     def previousTilt(self) -> tuple[int, int]:
+        """Previous tilt of pen"""
         return (
             self._get_previous_abs_float(EV_ABS, ABS_TILT_X, 0),
             self._get_previous_abs_float(EV_ABS, ABS_TILT_Y, 0),
@@ -253,10 +286,12 @@ class WacomEvent(Event):
 
     @property
     def was_down(self) -> bool:
+        """If the pen was touching the screen in the previous event"""
         return bool(self.previousData.get((EV_KEY, BTN_TOUCH), 0))
 
     @property
     def was_hover(self) -> bool:
+        """If the pen was hovering over the screen in the previous event"""
         return not self.was_down and self.previousData.get((EV_KEY, BTN_TOOL_PEN), 0)
 
 
@@ -278,6 +313,7 @@ class KeyEvent(Event):
 
     @property
     def keycode(self) -> int | None:
+        """keycode that was modified this event"""
         for e in self.rawEvents:
             if e.type == EV_KEY:
                 return e.code
@@ -286,6 +322,7 @@ class KeyEvent(Event):
 
     @property
     def pressed(self) -> set[int]:
+        """Keys that were pressed"""
         keys = set()
         for k, v in self.data.items():
             if k[0] == EV_KEY and v:
@@ -295,6 +332,7 @@ class KeyEvent(Event):
 
     @property
     def released(self) -> set[int]:
+        """Keys that were released"""
         pressed = self.pressed
         keys = set()
         for k, v in self.previousData.items():
@@ -305,6 +343,7 @@ class KeyEvent(Event):
 
     @property
     def is_repeat(self) -> bool:
+        """If this is a repeat event"""
         for e in self.rawEvents:
             if e.type == EV_KEY and e.value == 2:
                 return True
@@ -313,6 +352,7 @@ class KeyEvent(Event):
 
     @property
     def is_press(self) -> bool:
+        """If this was a press event"""
         for e in self.rawEvents:
             if e.type == EV_KEY and e.value == 1:
                 return True
@@ -321,6 +361,7 @@ class KeyEvent(Event):
 
     @property
     def is_release(self) -> bool:
+        """If this was a release event"""
         for e in self.rawEvents:
             if e.type == EV_KEY and e.value == 0:
                 return True
@@ -329,25 +370,32 @@ class KeyEvent(Event):
 
     @property
     def is_shift(self) -> bool:
+        """If shift is pressed"""
         pressed = self.pressed
         return KEY_LEFTSHIFT in pressed or KEY_RIGHTSHIFT in pressed
 
     @property
     def text(self) -> str | None:
+        """Text representation of key pressed"""
         return self.keymap[self.keycode][int(self.is_shift)]
 
 
 class Input:
+    """Input API"""
+
     @classmethod
     def devices(cls) -> list[InputDevice]:
+        """Input devices"""
         return [InputDevice(path) for path in list_devices()]
 
     @classmethod
     def positionDevices(cls) -> list[InputDevice]:
+        """Input devices that support EV_ABS"""
         return [d for d in cls.devices() if EV_ABS in d.capabilities()]
 
     @classmethod
     def keyDevices(cls) -> list[InputDevice]:
+        """Input devices that support EV_KEY"""
         return [
             d
             for d in cls.devices()
@@ -356,10 +404,12 @@ class Input:
 
     @classmethod
     def touchDevices(cls) -> list[InputDevice]:
+        """Input devices that support multitouch"""
         return [d for d in cls.positionDevices() if d.absinfo(ABS_MT_TRACKING_ID).max]
 
     @classmethod
     def wacomDevices(cls) -> list[InputDevice]:
+        """Input devices that use a stylus"""
         return [
             d
             for d in cls.positionDevices()
@@ -368,6 +418,9 @@ class Input:
 
     @classmethod
     def deviceType(cls, device: InputDevice) -> str:
+        """Gets the string representation of the device type for an input device
+
+        :returns: key, wacom, touch, or unknown"""
         if device in cls.keyDevices():
             return "key"
 
@@ -384,6 +437,12 @@ class Input:
     def rawEvents(
         cls, devices: list[InputDevice] = None, block: bool = False
     ) -> Iterator[tuple[InputDevice | None, list[InputEvent]]]:
+        """Get the raw events for input devices
+
+        :param devices: Optional list of devices to listen to
+        :param block: If listening should block until events are recieved. If you are not blocking, you will recieve an empty event every 100ms if no event happens
+        :return: Generator of events
+        """
         selector = DefaultSelector()
         for device in devices if devices is not None else cls.devices():
             selector.register(device, EVENT_READ)
@@ -430,6 +489,10 @@ class Input:
     def rawPositionEvents(
         cls, block: bool = False
     ) -> Iterator[tuple[InputDevice, InputEvent] | tuple[None, None]]:
+        """Get the raw events for position input devices
+
+        :param block: If listening should block until events are recieved. If you are not blocking, you will recieve an empty event every 100ms if no event happens
+        :return: Generator of events"""
         for d, e in cls.rawEvents(cls.positionDevices(), block=block):
             yield d, e
 
@@ -437,6 +500,10 @@ class Input:
     def rawTouchEvents(
         cls, block: bool = False
     ) -> Iterator[tuple[InputDevice, InputEvent] | tuple[None, None]]:
+        """Get the raw events for touch input devices
+
+        :param block: If listening should block until events are recieved. If you are not blocking, you will recieve an empty event every 100ms if no event happens
+        :return: Generator of events"""
         for d, e in cls.rawEvents(cls.touchDevices(), block=block):
             yield d, e
 
@@ -444,6 +511,10 @@ class Input:
     def rawWacomEvents(
         cls, block: bool = False
     ) -> Iterator[tuple[InputDevice, InputEvent] | tuple[None, None]]:
+        """Get the raw events for tablet input devices
+
+        :param block: If listening should block until events are recieved. If you are not blocking, you will recieve an empty event every 100ms if no event happens
+        :return: Generator of events"""
         for d, e in cls.rawEvents(cls.wacomDevices(), block=block):
             yield d, e
 
@@ -451,6 +522,10 @@ class Input:
     def rawKeyEvents(
         cls, block: bool = False
     ) -> Iterator[tuple[InputDevice, InputEvent] | tuple[None, None]]:
+        """Get the raw events for key input devices
+
+        :param block: If listening should block until events are recieved. If you are not blocking, you will recieve an empty event every 100ms if no event happens
+        :return: Generator of events"""
         for d, e in cls.rawEvents(cls.keyDevices(), block=block):
             yield d, e
 
@@ -468,7 +543,11 @@ class Input:
         return Event(device, state)
 
     @classmethod
-    def events(cls, block: bool = False) -> Event | None:
+    def events(cls, block: bool = False) -> Iterator[Event | None]:
+        """Listen for input events
+
+        :param block: If listening should block until events are recieved. If you are not blocking, you will recieve an empty event every 100ms if no event happens
+        :return: Generator of events"""
         states = {}
         for d, events in cls.rawEvents(block=block):
             if d is None or not events:
