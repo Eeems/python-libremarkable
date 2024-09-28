@@ -5,19 +5,39 @@ Python libremarkable
 .. automodule:: libremarkable
    :members:
 
-   .. data:: libremarkable.deviceType
+   .. class:: Keymap
+
+      alias of :py:class:`dict` [ :py:class:`tuple` [ :py:class:`str` | :py:data:`None`, :py:class:`str` | :py:data:`None` ]]
+
+   .. data:: deviceType
+      :type: DeviceType
 
       Current device type
 
-   .. data:: libremarkable.DEFAULT_FONT_SIZE
+   .. data:: orientation
+      :type: Orientation
+
+      Current orientation
+
+   .. data:: DEFAULT_FONT_SIZE
       :annotation: = 24
+      :type: int
 
       The default font size
 
-   .. data:: libremarkable.DEFAULT_KEYMAP
+   .. data:: DEFAULT_KEYMAP
+      :type: Keymap
 
       The default keymap
 
-.. autoclass:: libremarkable._framebuffer.FrameBuffer
+   .. data:: Framebuffer
+      :type: libremarkable._framebuffer.FrameBuffer
+
+      Framebuffer API instance
+
+   .. autoclass:: libremarkable._framebuffer.FrameBuffer
+      :members:
+      :show-inheritance:
+
+.. automodule:: libremarkable.geometry
    :members:
-   :show-inheritance:

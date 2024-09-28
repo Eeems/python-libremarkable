@@ -15,6 +15,12 @@ class DeviceType(Enum):
     RMPP = auto()
 
 
+class Orientation(Enum):
+    UNKNOWN = auto()  #: Unknown orientation
+    PORTRAIT = auto()  #: Portrait
+    LANDSCAPE = auto()  #: Landscape
+
+
 if os.path.exists("/sys/devices/soc0/machine"):
     with open("/sys/devices/soc0/machine", "r") as f:
         modelName = f.read().strip()
@@ -33,6 +39,7 @@ else:
 
 if modelName in ("reMarkable 1.0", "reMarkable Prototype 1"):
     current = DeviceType.RM1
+    orientation = Orientation.PORTRAIT
 
 elif modelName == "reMarkable 2.0":
     current = DeviceType.RM2
@@ -42,8 +49,11 @@ elif modelName == "reMarkable Ferrari":
 
 else:
     current = DeviceType.UNKNOWN
+    orientation = Orientation.UNKNOWN
 
 __all__ = [
+    "Orientation",
+    "orientation",
     "DeviceType",
     "current",
 ]

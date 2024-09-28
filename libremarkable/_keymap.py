@@ -1,7 +1,10 @@
 # ruff: noqa
+from __future__ import annotations
 from evdev.ecodes import *
 
-keymap = {
+Keymap: TypeAlias = dict[tuple[str | None, str | None]]  #: Key to character map
+
+keymap: Keymap = {
     KEY_0: ("0", ")"),
     KEY_1: ("1", "!"),
     KEY_102ND: (None, None),
