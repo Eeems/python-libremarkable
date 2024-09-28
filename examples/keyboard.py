@@ -29,7 +29,8 @@ def nextLine():
         y = 0
 
 
-rotation = 0 if orientation() != Orientation.Landscape else 90
+if orientation() == Orientation.Landscape:
+    print("Warning: Will only print in portait mode")
 
 print("Ready for you to type:")
 for event in Input.events(block=True):
@@ -57,7 +58,7 @@ for event in Input.events(block=True):
         nextLine()
 
     fb.set_rect(x, y, w, h, white)
-    fb.draw_text(x, y, w, h, text, fontSize=32, rotation=rotation)
+    fb.draw_text(x, y, w, h, text, fontSize=32)
     fb.update(x, y, w, h, WaveformMode.HighQualityGrayscale)
     x += w
     lastText = text

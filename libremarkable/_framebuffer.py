@@ -426,7 +426,6 @@ class FrameBuffer:
         text: str,
         color: color_t | str = "black",
         fontSize: int = DEFAULT_FONT_SIZE,
-        rotation: float = 0,
     ):
         """Draw text on the framebuffer memory
 
@@ -436,8 +435,7 @@ class FrameBuffer:
         :param height: height of area to draw text to
         :param text: text to draw
         :param color: color value or name of color to use
-        :param fontSize: Size of font to use
-        :param rotation: Rotation to apply to the text"""
+        :param fontSize: Size of font to use"""
         image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
             color = ImageColor.getcolor(color, image.mode)
@@ -467,7 +465,6 @@ class FrameBuffer:
         color: color_t | str = "black",
         fontSize: int = DEFAULT_FONT_SIZE,
         align: str = "left",
-        rotation: float = 0,
     ):
         """Draw multiline text on the framebuffer memory
 
@@ -478,8 +475,7 @@ class FrameBuffer:
         :param text: text to draw
         :param color: color value or name of color to use
         :param fontSize: Size of font to use
-        :param align: text align
-        :param rotation: Rotation to apply to the text"""
+        :param align: text align"""
         image = cls.to_image(left, top, width, height)
         if isinstance(color, str):
             color = ImageColor.getcolor(color, image.mode)
