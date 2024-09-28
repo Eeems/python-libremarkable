@@ -2,7 +2,7 @@
 name = "libremarkable"
 description = "Python library for developing applications for the reMarkable tablet."
 readme = "README.md"
-version = "1.0.0"
+version = "0.0.1"
 authors = [
     {name = "Nathaniel van Diepen", email = "eeems@eeems.email"},
 ]
