@@ -82,6 +82,7 @@ echo "[info] Installing dependencies"
 export DEBIAN_FRONTEND="noninteractive"
 apt-get -y update
 apt-get install -y \
+  ccache \
   libtiff5 \
   libjpeg62-turbo \
   libopenjp2-7 \
@@ -99,7 +100,7 @@ python -m pip install \
 	nuitka \
 	-r requirements.txt
 echo "[info] Building"
-NUITKA_CACHE_DIR=$(pwd)/.nuitka \
+export NUITKA_CACHE_DIR=/src/.nuitka
 python -m nuitka \
     --assume-yes-for-downloads \
     --remove-output \
@@ -212,7 +213,11 @@ dist/test.bin: $(shell find libremarkable -type f) test.py
 	  bash -ec "$$EXECUTABLE_SCRIPT"
 
 dist/test.tar.gz: dist/test.bin
-	docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
+	docker run \
+	  --rm \
+	  --privileged \
+	  tonistiigi/binfmt \
+	  --install linux/arm/v7
 	docker run \
 	  --rm \
 	  --platform=linux/arm/v7 \
