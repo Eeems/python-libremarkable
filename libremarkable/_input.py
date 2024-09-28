@@ -380,6 +380,12 @@ class KeyEvent(Event):
         return self.keymap[self.keycode][int(self.is_shift)]
 
 
+VIRTUAL_KEYBOARD_IDS = [
+    "0fac:0ade",
+    "0fac:1ade",
+]
+
+
 class Input:
     """Input API"""
 
@@ -400,6 +406,29 @@ class Input:
             d
             for d in cls.devices()
             if d not in cls.positionDevices() and EV_KEY in d.capabilities()
+        ]
+
+    @classmethod
+    def keyboards(cls) -> list[InputDevice]:
+        """Keyboard input devices"""
+        return [d for d in cls.keyDevices() if d.info.vendor and d.info.product]
+
+    @classmethod
+    def virtualKeyboards(cls) -> list[InputDevice]:
+        """Keyboards that are vitual"""
+        return [
+            d
+            for d in cls.keyboards()
+            if f"{d.info.vendor:04x}:{d.info.product:04x}" in VIRTUAL_KEYBOARD_IDS
+        ]
+
+    @classmethod
+    def physicalKeyboards(cls) -> list[InputDevice]:
+        """Physical keyboards"""
+        return [
+            d
+            for d in cls.keyboards()
+            if f"{d.info.vendor:04x}:{d.info.product:04x}" not in VIRTUAL_KEYBOARD_IDS
         ]
 
     @classmethod

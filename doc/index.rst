@@ -14,11 +14,6 @@ Python libremarkable
 
       Current device type
 
-   .. data:: orientation
-      :type: Orientation
-
-      Current orientation
-
    .. data:: DEFAULT_FONT_SIZE
       :annotation: = 24
       :type: int

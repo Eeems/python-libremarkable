@@ -2,6 +2,8 @@ from libremarkable import Input
 from libremarkable import KeyEvent
 from libremarkable import FrameBuffer as fb
 from libremarkable import WaveformMode
+from libremarkable import orientation
+from libremarkable import Orientation
 
 from PIL import ImageFont
 
@@ -26,6 +28,8 @@ def nextLine():
     if y + h >= fb.height():
         y = 0
 
+
+rotation = 0 if orientation() != Orientation.Landscape else 90
 
 print("Ready for you to type:")
 for event in Input.events(block=True):
@@ -53,7 +57,7 @@ for event in Input.events(block=True):
         nextLine()
 
     fb.set_rect(x, y, w, h, white)
-    fb.draw_text(x, y, w, h, text, fontSize=32)
+    fb.draw_text(x, y, w, h, text, fontSize=32, rotation=rotation)
     fb.update(x, y, w, h, WaveformMode.HighQualityGrayscale)
     x += w
     lastText = text

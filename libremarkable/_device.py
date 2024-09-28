@@ -39,7 +39,6 @@ else:
 
 if modelName in ("reMarkable 1.0", "reMarkable Prototype 1"):
     current = DeviceType.RM1
-    orientation = Orientation.PORTRAIT
 
 elif modelName == "reMarkable 2.0":
     current = DeviceType.RM2
@@ -49,7 +48,23 @@ elif modelName == "reMarkable Ferrari":
 
 else:
     current = DeviceType.UNKNOWN
-    orientation = Orientation.UNKNOWN
+
+
+def orientation() -> Orientation:
+    """Get the current device orientation"""
+    if current == DeviceType.RM1:
+        return Orientation.PORTRAIT
+
+    if current not in (DeviceType.RM2, DeviceType.RMPP):
+        return Orientation.UNKNOWN
+
+    from ._input import Input
+
+    if Input.physicalKeyboards():
+        return Orientation.LANDSCAPE
+
+    return Orientation.PORTRAIT
+
 
 __all__ = [
     "Orientation",
