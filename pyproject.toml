@@ -24,6 +24,7 @@ dynamic = ["dependencies"]
 Homepage = "https://github.com/Eeems-Org/python-libremarkable"
 Repository = "https://github.com/Eeems-Org/python-libremarkable.git"
 Issues = "https://github.com/Eeems-Org/python-libremarkable/issues"
+Documentation = "https://libremarkable.eeems.codes/"
 
 [build-system]
 requires = ["setuptools >= 65.0"]
