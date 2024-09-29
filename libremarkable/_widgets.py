@@ -251,7 +251,6 @@ class Widget(IChildWidgets):
 
     @width.setter
     def width(self, width: float):
-        assert 0 <= width <= 1
         self.resize(width, self.height)
         self.dirty = True
 
@@ -261,7 +260,6 @@ class Widget(IChildWidgets):
 
     @height.setter
     def height(self, height: float):
-        assert 0 <= height <= 1
         self.resize(self.width, height)
         self.dirty = True
 
@@ -314,11 +312,11 @@ class Widget(IChildWidgets):
         self.rect = rect
 
     def resize(self, width: float, height: float):
-        assert -1 <= width <= 1
-        assert -1 <= height <= 1
+        assert 0 <= width <= 1
+        assert 0 <= height <= 1
         rect = self.rect.resized(width, height)
-        assert -1 <= rect.width <= 1
-        assert -1 <= rect.height <= 1
+        assert 0 <= rect.width <= 1
+        assert 0 <= rect.height <= 1
         self.rect = rect
 
     def layout(self, screenRect: Rect):
