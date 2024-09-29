@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 
+from ._safe_property import safe_property
+
 from ._framebuffer import FrameBuffer
 from ._framebuffer import WaveformMode
 from ._framebuffer import DEFAULT_FONT_SIZE
@@ -127,11 +129,15 @@ class Widget:
         assert 0 <= bottom <= 1
         self.rect = Rect(left, top, right, bottom)
         self.oldRect = Rect(0, 0, 0, 0)
-        self.parent: Widget | Scene = None  #: Parent widget or scene
-        self.children: list[Widget] = []
+        self.parent: ref[Widget | Scene] = None  #: Parent widget or scene
+        self._children: list[Widget] = []
         self.dirty: bool = True
         self.screenRect: Rect = Rect(0, 0, 0, 0)
         self.oldScreenRect: Rect = Rect(0, 0, 0, 0)
+
+    @property
+    def children(self) -> list[Widget]:
+        return self._children
 
     @property
     def left(self):
@@ -303,7 +309,43 @@ class Widget:
         return region
 
 
-class Text(Widget):
+class IChildlessWidget:
+    """Mixin to disable children on a widget"""
+
+    @safe_property
+    def children(self) -> list[Widget]:
+        return []
+
+    def paint_children(self, image: Image, region: Region) -> Region:
+        return Region()
+
+
+class IImagelessWidget:
+    """Mixin to disable the image property on a widget, rendering is instead handled by a custom paint() method"""
+
+    @property
+    def image(self) -> Image:
+        raise NotImplementedError()
+
+    def paint(self, image: Image) -> Region:
+        raise NotImplementedError()
+
+
+class IAlwaysRenderWidget:
+    """Mixin to make a widget always render"""
+
+    @property
+    def dirty(self) -> bool:
+        return True
+
+    @dirty.setter
+    def dirty(self, dirty: bool):
+        pass
+
+
+class Text(IChildlessWidget, IImagelessWidget, Widget):
+    """Text widget"""
+
     def __init__(
         self,
         left: float,
@@ -325,10 +367,6 @@ class Text(Widget):
     color = widgetProperty("color", str)
     fontSize = widgetProperty("fontSize", int)
 
-    @property
-    def image(self) -> Image:
-        raise NotImplementedError()
-
     def paint(self, image: Image) -> Region:
         if self.screenRect is None or self.parent() is None or not self.screenRect:
             return Region()
@@ -345,7 +383,9 @@ class Text(Widget):
         return Region(self.screenRect) if self.dirty else Region()
 
 
-class Rectangle(Widget):
+class Rectangle(IImagelessWidget, Widget):
+    """Rectangle widget"""
+
     def __init__(
         self,
         left: float,
@@ -392,7 +432,9 @@ class Rectangle(Widget):
         return region
 
 
-class Picture(Widget):
+class Picture(IChildlessWidget, IImagelessWidget, Widget):
+    """Image widget"""
+
     def __init__(
         self,
         left: float,
@@ -414,10 +456,6 @@ class Picture(Widget):
     @widgetProperty
     def path(path: str):
         assert os.path.exists(path)
-
-    @property
-    def image(self) -> Image:
-        raise NotImplementedError()
 
     def paint(self, image: Image) -> Region:
         left, top, right, bottom = self.drawRect
