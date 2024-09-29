@@ -25,7 +25,47 @@ from weakref import ref
 from typing import Iterable
 
 
-class Scene:
+class IChildWidgets:
+    def __init__(self, children: list[Widget] = [], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._children = children
+        self._screenRect: Rect = Rect(0, 0, 0, 0)
+        self._oldScreenRect: Rect = Rect(0, 0, 0, 0)
+        for widget in self.children:
+            widget.parent = ref(self)
+
+    @property
+    def screenRect(self) -> Rect:
+        return self._screenRect
+
+    @screenRect.setter
+    def screenRect(self, screenRect: Rect):
+        self._screenRect = screenRect
+
+    @property
+    def oldScreenRect(self) -> Rect:
+        return self._oldScreenRect
+
+    @oldScreenRect.setter
+    def oldScreenRect(self, oldScreenRect: Rect):
+        self._oldScreenRect = oldScreenRect
+
+    @property
+    def children(self) -> list[Widget]:
+        return self._children
+
+    @property
+    def changed(self) -> Iterable[Widget]:
+        """Widgets that have changed and need to be re-painted"""
+        for widget in self.children:
+            if widget.dirty or list(widget.changed):
+                yield widget
+
+    def paint_children(self, image: Image, region: Region) -> Region:
+        raise NotImplementedError()
+
+
+class Scene(IChildWidgets):
     """Scene with widgets"""
 
     def __init__(
@@ -39,10 +79,8 @@ class Scene:
         :param fb: framebuffer instance to draw the scene to
         :param children: widgets to add to the scene
         :param background: Background colour"""
+        super().__init__(children)
         self.fb = fb  #: Framebuffer instance
-        self.children = children  #: Child widgets
-        for widget in self.children:
-            widget.parent = ref(self)
 
         self.buffer = Image.new(
             "RGBA",
@@ -50,18 +88,12 @@ class Scene:
             background,
         )  #: Buffer for scene
 
+    @override
     @property
     def screenRect(self) -> Rect:
         """Screen geometry for widgets to use when doing layout"""
         # TODO handle landscape
         return Rect(0, 0, self.fb.width(), self.fb.height())
-
-    @property
-    def changed(self) -> Iterable[Widget]:
-        """Widgets that have changed and need to be re-painted"""
-        for widget in self.children:
-            if widget.dirty or list(widget.changed):
-                yield widget
 
     def update(self, fullUpdate: bool = False):
         """Perform a screen update. This first performs layout on all the widgets, re-paints any changes
@@ -121,7 +153,17 @@ class Scene:
 
 
 def widgetProperty(func: Callable[Self, Any] | str, T: type | None = None):
-    """Decorator"""
+    """Define a widget property, modifications to this property will mark the widget as dirty, which
+    will render it again in the next scene update.
+
+    .. code-block:: python
+
+       class MyWidget(Widget):
+           my_prop: str = widgetProperty("my_prop", str)
+
+           @widgetProperty
+           def my_other_prop(my_other_prop: str):
+               assert my_other_prop is not None"""
     if isinstance(func, str):
 
         def noop(x):
@@ -145,23 +187,23 @@ def widgetProperty(func: Callable[Self, Any] | str, T: type | None = None):
     return property(getter, setter)
 
 
-class Widget:
-    def __init__(self, left: float, top: float, right: float, bottom: float):
+class Widget(IChildWidgets):
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float,
+        children: list[Widget] = [],
+    ):
         assert 0 <= left <= 1
         assert 0 <= top <= 1
         assert 0 <= right <= 1
         assert 0 <= bottom <= 1
         self.rect = Rect(left, top, right, bottom)
-        self.oldRect = Rect(0, 0, 0, 0)
         self.parent: ref[Widget | Scene] = None  #: Parent widget or scene
-        self._children: list[Widget] = []
         self.dirty: bool = True
-        self.screenRect: Rect = Rect(0, 0, 0, 0)
-        self.oldScreenRect: Rect = Rect(0, 0, 0, 0)
-
-    @property
-    def children(self) -> list[Widget]:
-        return self._children
+        super().__init__(children)
 
     @property
     def left(self):
@@ -224,12 +266,6 @@ class Widget:
         self.dirty = True
 
     @property
-    def changed(self) -> Iterable[Widget]:
-        for widget in self.children:
-            if widget.dirty or list(widget.changed):
-                yield widget
-
-    @property
     def scene(self) -> Scene | None:
         parent = self.parent()
         while not isinstance(parent, Scene):
@@ -270,16 +306,20 @@ class Widget:
     def translate(self, x: float, y: float):
         assert -1 <= x <= 1
         assert -1 <= y <= 1
-        w, h = self.width, self.height
-        self.left += x
-        self.top += y
-        self.resize(w, h)
+        rect = self.rect.translated(x, y)
+        assert -1 <= rect.left <= 1
+        assert -1 <= rect.top <= 1
+        assert -1 <= rect.right <= 1
+        assert -1 <= rect.bottom <= 1
+        self.rect = rect
 
     def resize(self, width: float, height: float):
         assert -1 <= width <= 1
         assert -1 <= height <= 1
-        self.right = self.left + width
-        self.bottom = self.top + height
+        rect = self.rect.resized(width, height)
+        assert -1 <= rect.width <= 1
+        assert -1 <= rect.height <= 1
+        self.rect = rect
 
     def layout(self, screenRect: Rect):
         self.oldScreenRect = self.screenRect

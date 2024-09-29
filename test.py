@@ -251,5 +251,54 @@ asserta(
     ),
 )
 
+a = Rect(0, 0, 20, 20)
+a.translate(10, 10)
+assertv(f"{a}.translate(10, 10)", a, Rect(10, 10, 30, 30))
+
+a = Rect(0, 0, 20, 20)
+b = a.translated(10, 10)
+assertv(f"{a} != {b}", a != b, True)
+c = Rect(10, 10, 30, 30)
+assertv(f"{b} is {c}", b, c)
+
+a = Rect(0, 0, 20, 20)
+a.resize(10, 10)
+assertv(f"{a}.resize(10, 10)", a, Rect(0, 0, 10, 10))
+
+a = Rect(0, 0, 20, 20)
+b = a.resized(10, 10)
+assertv(f"{a} != {b}", a != b, True)
+c = Rect(0, 0, 10, 10)
+assertv(f"{b} is {c}", b, c)
+
+a = Rect(0, 0, 20, 20)
+a.topLeft = Point(10, 10)
+b = Rect(10, 10, 20, 20)
+assertv(f"{a} == {b}", a == b, True)
+a.topRight = Point(10, 10)
+b = Rect(10, 10, 10, 20)
+assertv(f"{a} == {b}", a == b, True)
+a.bottomLeft = Point(15, 15)
+b = Rect(15, 10, 10, 15)
+assertv(f"{a} == {b}", a == b, True)
+a.bottomRight = Point(15, 20)
+b = Rect(15, 10, 15, 20)
+assertv(f"{a} == {b}", a == b, True)
+
+a = Rect(0, 0, 10, 10)
+a.center = Point(10, 10)
+b = Rect(5, 5, 15, 15)
+assertv(f"{a} == {b}", a == b, True)
+
+a = Rect(0, 0, 10, 10)
+a.width = 20
+b = Rect(0, 0, 20, 10)
+assertv(f"{a} == {b}", a == b, True)
+
+a = Rect(0, 0, 10, 10)
+a.height = 20
+b = Rect(0, 0, 10, 20)
+assertv(f"{a} == {b}", a == b, True)
+
 if FAILED:
     sys.exit(1)

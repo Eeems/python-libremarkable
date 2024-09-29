@@ -53,35 +53,79 @@ class Rect:
         """The width of the rectangle"""
         return self.right - self.left
 
+    @width.setter
+    def width(self, width: float):
+        self.resize(width, self.height)
+
     @property
     def height(self) -> float:
         """The height of the rectangle"""
         return self.bottom - self.top
+
+    @height.setter
+    def height(self, height: float):
+        self.resize(self.width, height)
 
     @property
     def topLeft(self) -> Point:
         """The top left point of the rectangle"""
         return Point(self.left, self.top)
 
+    @topLeft.setter
+    def topLeft(self, topLeft: Point):
+        right, bottom = self.bottomRight
+        self.left, self.top = topLeft
+        self.right = right
+        self.bottom = bottom
+
     @property
     def topRight(self) -> Point:
         """The top right point of the rectangle"""
         return Point(self.right, self.top)
+
+    @topRight.setter
+    def topRight(self, topRight: Point):
+        left, bottom = self.bottomLeft
+        self.right, self.top = topRight
+        self.left = left
+        self.bottom = bottom
 
     @property
     def bottomLeft(self) -> Point:
         """The bottom left point of the rectangle"""
         return Point(self.left, self.bottom)
 
+    @bottomLeft.setter
+    def bottomLeft(self, bottomLeft: Point):
+        right, top = self.topRight
+        self.left, self.bottom = bottomLeft
+        self.right = right
+        self.top = top
+
     @property
     def bottomRight(self) -> Point:
         """The bottom right point of the rectangle"""
         return Point(self.right, self.bottom)
 
+    @bottomRight.setter
+    def bottomRight(self, bottomRight: Point):
+        left, top = self.topLeft
+        self.right, self.bottom = bottomRight
+        self.left = left
+        self.top = top
+
     @property
     def center(self) -> Point:
         """The center point of the rectangle"""
         return Point(self.left + (self.width / 2), self.top + (self.height / 2))
+
+    @center.setter
+    def center(self, center: Point):
+        x_offset, y_offset = self.width / 2, self.height / 2
+        self.left = center.x - x_offset
+        self.top = center.y - y_offset
+        self.right = center.x + x_offset
+        self.bottom = center.y + y_offset
 
     @property
     def area(self) -> float:
@@ -201,6 +245,44 @@ class Rect:
         """Clone and return a rect where left, top, right, and bottom have been converted into integers
         :return: Cloned rectangle with integer coordinates"""
         return Rect(int(self.left), int(self.top), int(self.right), int(self.bottom))
+
+    def translate(self, x: float, y: float):
+        """Move the rectangle on the 2d plane
+
+        :param x: x coordinate translation
+        :param y: y coordinate translation"""
+        w, h = self.width, self.height
+        self.left += x
+        self.top += y
+        self.resize(w, h)
+
+    def translated(self, x: float, y: float) -> Rect:
+        """Clone the rect and then translate it on a 2d plane
+
+        :param x: x coordinate translation
+        :param y: y coordinate translation
+        :return: The translated rect"""
+        rect = Rect(*self)
+        rect.translate(x, y)
+        return rect
+
+    def resize(self, width: float, height: float):
+        """resize the rectangle to a specific width and height, this resizes with topRight as the anchor-point
+
+        :param with: new width of the rect
+        :param height: new height of the rect"""
+        self.right = self.left + width
+        self.bottom = self.top + height
+
+    def resized(self, width: float, height: float) -> Rect:
+        """Clone the rect and then resize it to a specific width and height with the topRight as the anchor-point
+
+        :param with: width of the new rect
+        :param height: height of the new rect
+        :return: The resized rect"""
+        rect = Rect(*self)
+        rect.resize(width, height)
+        return rect
 
 
 class Region(MutableSet[Rect]):
