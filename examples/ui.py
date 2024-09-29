@@ -17,7 +17,10 @@ scene = Scene(
         Picture(0, 0, 0.03, 0.03, "/opt/usr/share/icons/oxide/48x48/apps/image.png"),
     ],
 )
-scene.update(True)
+scene.update()
 sleep(1)
 rectangle.translate(-0.3, 0)
+scene.update()
+sleep(1)
+text.text = "Yo!"
 scene.update()

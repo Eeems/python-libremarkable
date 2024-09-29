@@ -272,6 +272,9 @@ class Region(MutableSet[Rect]):
         """Add a rect or region to this region
 
         :param Rect|Iterable[Rect]|Region item: Item to add to the region"""
+        if item is None:
+            return self
+
         if isinstance(item, Rect):
             self.add(item)
             return self
@@ -302,6 +305,9 @@ class Region(MutableSet[Rect]):
         :param Rect|Iterable[Rect]|Region item: Item to add to the cloned region
         :return: clone merged with item"""
         region = Region(*self.elements)
+        if item is None:
+            return region
+
         if isinstance(item, Rect):
             region.add(item)
             return region

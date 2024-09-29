@@ -55,9 +55,16 @@ class Scene:
 
         needsRepaint = Region()
         for widget in self.changed:
-            paintedRegion = widget.paint(self.buffer)
+            if (
+                widget.screenRect is None
+                or widget.parent() is None
+                or not widget.screenRect
+            ):
+                continue
+
+            region += widget.paint(self.buffer)
             needsRepaint += widget.oldScreenRect - widget.screenRect
-            region += paintedRegion
+            widget.dirty = False
 
         # TODO sort out how to paint less
         d = ImageDraw.Draw(self.buffer)
@@ -88,6 +95,30 @@ class Scene:
             self.fb.wait(marker)
 
 
+def widgetProperty(func, T=None):
+    if isinstance(func, str):
+
+        def noop(x):
+            pass
+
+        name = func
+        func = noop
+
+    else:
+        name = func.__name__
+        T = next(iter(func.__annotations__))
+
+    def setter(self, value: T):
+        func(value)
+        self._data[name] = value
+        self.dirty = True
+
+    def getter(self) -> T:
+        return self._data[name]
+
+    return property(getter, setter)
+
+
 class Widget:
     def __init__(self, left: float, top: float, right: float, bottom: float):
         assert 0 <= left <= 1
@@ -110,6 +141,7 @@ class Widget:
     def left(self, left: float):
         assert 0 <= left <= 1
         self.rect.left = left
+        self.dirty = True
 
     @property
     def top(self):
@@ -119,6 +151,7 @@ class Widget:
     def top(self, top: float):
         assert 0 <= top <= 1
         self.rect.top = top
+        self.dirty = True
 
     @property
     def right(self):
@@ -128,6 +161,7 @@ class Widget:
     def right(self, right: float):
         assert 0 <= right <= 1
         self.rect.right = right
+        self.dirty = True
 
     @property
     def bottom(self):
@@ -137,6 +171,7 @@ class Widget:
     def bottom(self, bottom: float):
         assert 0 <= bottom <= 1
         self.rect.bottom = bottom
+        self.dirty = True
 
     @property
     def width(self):
@@ -146,6 +181,7 @@ class Widget:
     def width(self, width: float):
         assert 0 <= width <= 1
         self.resize(width, self.height)
+        self.dirty = True
 
     @property
     def height(self):
@@ -155,16 +191,13 @@ class Widget:
     def height(self, height: float):
         assert 0 <= height <= 1
         self.resize(self.width, height)
+        self.dirty = True
 
     @property
     def changed(self) -> Iterable[Widget]:
-        if self.dirty:
-            yield self
-            return
-
         for widget in self.children:
-            for widget2 in widget.changed:
-                yield widget2
+            if widget.dirty or list(widget.changed):
+                yield widget
 
     @property
     def scene(self) -> Scene | None:
@@ -190,6 +223,19 @@ class Widget:
             (self.screenRect.width, self.screenRect.height),
             (0, 0, 0, 0),
         )
+
+    @property
+    def drawRect(self) -> Rect:
+        left, top, right, bottom = self.screenRect
+        parent = self.parent()
+        if not isinstance(parent, Scene):
+            rect = parent.screenRect
+            left = int(left - rect.left)
+            top = int(top - rect.top)
+            right = int(right - rect.left)
+            bottom = int(bottom - rect.top)
+
+        return Rect(left, top, right, bottom)
 
     def translate(self, x: float, y: float):
         assert -1 <= x <= 1
@@ -222,42 +268,37 @@ class Widget:
 
             widget.layout(self.screenRect)
 
+    def paint_children(self, image: Image, region: Region) -> Region:
+        needsRepaint = Region()
+        for widget in self.changed:
+            if widget.screenRect is None or not widget.screenRect:
+                continue
+
+            region += widget.paint(image)
+            needsRepaint += widget.oldScreenRect - widget.screenRect
+            widget.dirty = False
+
+        # TODO sort out how to paint less
+        d = ImageDraw.Draw(image)
+        for rect in needsRepaint:
+            d.rectangle((tuple(rect.topLeft), tuple(rect.bottomRight)), (0, 0, 0, 0))
+
+        for widget in self.children:
+            if widget.rect in needsRepaint:
+                widget.paint(image)
+
+        return needsRepaint
+
     def paint(self, image: Image) -> Region:
-        if self.screenRect is None or self.parent() is None or not self.screenRect:
-            return Rect(0, 0, 0, 0)
-
-        region = Region()
-        if self.dirty:
-            region.add(self.screenRect)
-            self.dirty = False
-
+        region = Region(self.screenRect) if self.dirty else Region()
         widgetImage = self.image
         if widgetImage is None:
-            return Rect(0, 0, 0, 0)
+            return Region()
 
         assert widgetImage.width == self.screenRect.width
         assert widgetImage.height == self.screenRect.height
-        needsRepaint = Region()
-        for widget in self.children:
-            paintedRegion = widget.paint(widgetImage)
-            needsRepaint += widget.oldScreenRect - widget.screenRect
-            region += paintedRegion
-
-        # TODO sort out how to paint less
-        for widget in self.children:
-            if widget.rect in needsRepaint:
-                widget.paint(widgetImage)
-
-        region += needsRepaint
-        left, top, right, bottom = self.screenRect
-        parent = self.parent()
-        if not isinstance(parent, Scene):
-            rect = parent.screenRect
-            left = int(left - rect.left)
-            top = int(top - rect.top)
-            right = int(right - rect.left)
-            bottom = int(bottom - rect.top)
-
+        region += self.paint_children(widgetImage, region)
+        left, top, right, bottom = self.drawRect
         image.paste(widgetImage, (left, top), widgetImage)
         return region
 
@@ -274,22 +315,33 @@ class Text(Widget):
         fontSize: int = DEFAULT_FONT_SIZE,
     ):
         super().__init__(left, top, right, bottom)
-        self.text: str = text
-        self.color: str = color
-        self.fontSize: int = fontSize
+        self._data = {
+            "text": text,
+            "color": color,
+            "fontSize": fontSize,
+        }
 
-    @property
-    def image(self) -> Image:
-        image = super().image
+    text = widgetProperty("text", str)
+    color = widgetProperty("color", str)
+    fontSize = widgetProperty("fontSize", int)
+
+    def paint(self, image: Image) -> Region:
+        if self.screenRect is None or self.parent() is None or not self.screenRect:
+            return Region()
+
+        left, top, right, bottom = self.drawRect
         d = ImageDraw.Draw(image)
         d.fontmode = "L"
-        d.text(
-            (0, 0),
+        d.multiline_text(
+            (left, top),
             self.text,
             self.color,
             font=ImageFont.load_default(size=self.fontSize),
         )
-        return image
+        if self.dirty:
+            return Region(self.screenRect)
+
+        return Region()
 
 
 class Rectangle(Widget):
@@ -302,15 +354,27 @@ class Rectangle(Widget):
         color: str = "white",
     ):
         super().__init__(left, top, right, bottom)
-        self.color: str = color
+        self._data = {
+            "color": color,
+        }
+
+    color = widgetProperty("color", str)
 
     @property
     def image(self) -> Image:
-        return Image.new(
-            "RGBA",
-            (self.screenRect.width, self.screenRect.height),
-            self.color,
-        )
+        raise NotImplementedError()
+
+    def paint(self, image: Image) -> Region:
+        left, top, right, bottom = self.drawRect
+        d = ImageDraw.Draw(image)
+        d.rectangle(((left, top), (right, bottom)), "white")
+        region = Region(self.screenRect) if self.dirty else Region()
+        if self.children:
+            widgetImage = image.crop((left, top, right, bottom))
+            region += self.paint_children(widgetImage, region)
+            image.paste(widgetImage, (left, top), widgetImage)
+
+        return region
 
 
 class Picture(Widget):
@@ -321,27 +385,31 @@ class Picture(Widget):
         right: float,
         bottom: float,
         path: str,
-        color: str = "white",
+        background: str = "white",
     ):
         super().__init__(left, top, right, bottom)
         assert os.path.exists(path)
-        self.path: str = path
-        self.color: str = color
+        self._data = {
+            "path": path,
+            "background": background,
+        }
+
+    background = widgetProperty("background", str)
+
+    @widgetProperty
+    def path(path: str):
+        assert os.path.exists(path)
 
     @property
     def image(self) -> Image:
-        image = Image.new(
-            "RGBA",
-            (self.screenRect.width, self.screenRect.height),
-            self.color,
-        )
+        raise NotImplementedError()
+
+    def paint(self, image: Image) -> Region:
+        left, top, right, bottom = self.drawRect
+        d = ImageDraw.Draw(image)
+        d.rectangle(((left, top), (right, bottom)), self.background)
         thumbnail = Image.open(self.path)
         thumbnail.thumbnail((self.screenRect.width, self.screenRect.height))
-        image.paste(
-            thumbnail,
-            (
-                (image.width - thumbnail.width) // 2,
-                (image.height - thumbnail.height) // 2,
-            ),
-        )
-        return image
+        image.paste(thumbnail, (left, top), thumbnail)
+        region = Region(self.screenRect) if self.dirty else Region()
+        return region
