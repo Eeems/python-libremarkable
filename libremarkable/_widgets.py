@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import os
 
+from typing import Self
+from typing import Any
+from collections.abc import Callable
+
+from ._typing import override
+
 from ._safe_property import safe_property
 
 from ._framebuffer import FrameBuffer
@@ -22,7 +28,17 @@ from typing import Iterable
 class Scene:
     """Scene with widgets"""
 
-    def __init__(self, fb: FrameBuffer, children: list[Widget] = []):
+    def __init__(
+        self,
+        fb: FrameBuffer,
+        children: list[Widget] = [],
+        background: str | tuple = "white",
+    ):
+        """Create a new scene
+
+        :param fb: framebuffer instance to draw the scene to
+        :param children: widgets to add to the scene
+        :param background: Background colour"""
         self.fb = fb  #: Framebuffer instance
         self.children = children  #: Child widgets
         for widget in self.children:
@@ -31,21 +47,28 @@ class Scene:
         self.buffer = Image.new(
             "RGBA",
             (self.fb.width(), self.fb.height()),
-            "white",
+            background,
         )  #: Buffer for scene
 
     @property
     def screenRect(self) -> Rect:
+        """Screen geometry for widgets to use when doing layout"""
         # TODO handle landscape
         return Rect(0, 0, self.fb.width(), self.fb.height())
 
     @property
     def changed(self) -> Iterable[Widget]:
+        """Widgets that have changed and need to be re-painted"""
         for widget in self.children:
             if widget.dirty or list(widget.changed):
                 yield widget
 
     def update(self, fullUpdate: bool = False):
+        """Perform a screen update. This first performs layout on all the widgets, re-paints any changes
+        to the buffer, and then updates the screen from the buffer
+
+        :param fullUpdate: If the entire screen should be redrawn instead of just the changes
+        """
         screenRect = self.screenRect
         # TODO handle landscape
         for widget in self.children:
@@ -97,7 +120,8 @@ class Scene:
             self.fb.wait(marker)
 
 
-def widgetProperty(func, T=None):
+def widgetProperty(func: Callable[Self, Any] | str, T: type | None = None):
+    """Decorator"""
     if isinstance(func, str):
 
         def noop(x):
@@ -312,10 +336,12 @@ class Widget:
 class IChildlessWidget:
     """Mixin to disable children on a widget"""
 
+    @override
     @safe_property
     def children(self) -> list[Widget]:
         return []
 
+    @override
     def paint_children(self, image: Image, region: Region) -> Region:
         return Region()
 
@@ -323,10 +349,12 @@ class IChildlessWidget:
 class IImagelessWidget:
     """Mixin to disable the image property on a widget, rendering is instead handled by a custom paint() method"""
 
+    @override
     @property
     def image(self) -> Image:
         raise NotImplementedError()
 
+    @override
     def paint(self, image: Image) -> Region:
         raise NotImplementedError()
 
@@ -334,6 +362,7 @@ class IImagelessWidget:
 class IAlwaysRenderWidget:
     """Mixin to make a widget always render"""
 
+    @override
     @property
     def dirty(self) -> bool:
         return True
@@ -367,6 +396,7 @@ class Text(IChildlessWidget, IImagelessWidget, Widget):
     color = widgetProperty("color", str)
     fontSize = widgetProperty("fontSize", int)
 
+    @override
     def paint(self, image: Image) -> Region:
         if self.screenRect is None or self.parent() is None or not self.screenRect:
             return Region()
@@ -410,10 +440,7 @@ class Rectangle(IImagelessWidget, Widget):
     def lineWidth(lineWidth: int):
         assert lineWidth > 0
 
-    @property
-    def image(self) -> Image:
-        raise NotImplementedError()
-
+    @override
     def paint(self, image: Image) -> Region:
         left, top, right, bottom = self.drawRect
         d = ImageDraw.Draw(image)
@@ -457,6 +484,7 @@ class Picture(IChildlessWidget, IImagelessWidget, Widget):
     def path(path: str):
         assert os.path.exists(path)
 
+    @override
     def paint(self, image: Image) -> Region:
         left, top, right, bottom = self.drawRect
         d = ImageDraw.Draw(image)
