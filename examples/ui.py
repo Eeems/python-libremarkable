@@ -6,7 +6,7 @@ from libremarkable._widgets import Scene
 from libremarkable._widgets import Text
 from libremarkable._widgets import Rectangle
 
-rectangle = Rectangle(0.4, 0.4, 0.6, 0.6)
+rectangle = Rectangle(0.45, 0.45, 0.55, 0.55)
 text = Text(0, 0, 1, 1)
 text.text = "Hello World!"
 rectangle.children.append(text)

@@ -4,9 +4,6 @@ from ._framebuffer import FrameBuffer
 from ._framebuffer import WaveformMode
 from ._framebuffer import DEFAULT_FONT_SIZE
 
-from ._device import Orientation
-from ._device import orientation
-
 from .geometry import Rect
 from .geometry import Region
 
@@ -33,9 +30,7 @@ class Scene:
 
     @property
     def screenRect(self) -> Rect:
-        if orientation() != Orientation.LANDSCAPE:
-            return Rect(0, 0, self.fb.width(), self.fb.height())
-
+        # TODO handle landscape
         return Rect(0, 0, self.fb.height(), self.fb.width())
 
     @property
@@ -46,6 +41,7 @@ class Scene:
 
     def update(self):
         screenRect = self.screenRect
+        # TODO handle landscape
         for widget in self.children:
             widget.layout(screenRect)
 
