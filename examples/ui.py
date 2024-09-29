@@ -7,8 +7,8 @@ from libremarkable._widgets import Text
 from libremarkable._widgets import Rectangle
 from libremarkable._widgets import Picture
 
-rectangle = Rectangle(0.45, 0.45, 0.55, 0.55)
-text = Text(0, 0, 1, 1, "Hello World!")
+rectangle = Rectangle(0.45, 0.45, 0.55, 0.55, color="black", lineWidth=3)
+text = Text(0.015, 0.015, 0.985, 0.985, "Hello World!")
 rectangle.children.append(text)
 scene = Scene(
     fb,

@@ -352,14 +352,23 @@ class Rectangle(Widget):
         top: float,
         right: float,
         bottom: float,
-        color: str = "white",
+        background: str = "white",
+        color: str | None = None,
+        lineWidth: int = 1,
     ):
         super().__init__(left, top, right, bottom)
         self._data = {
+            "background": background,
             "color": color,
+            "lineWidth": lineWidth,
         }
 
-    color = widgetProperty("color", str)
+    background = widgetProperty("background", str | None)
+    color = widgetProperty("color", str | None)
+
+    @widgetProperty
+    def lineWidth(lineWidth: int):
+        assert lineWidth > 0
 
     @property
     def image(self) -> Image:
@@ -368,7 +377,12 @@ class Rectangle(Widget):
     def paint(self, image: Image) -> Region:
         left, top, right, bottom = self.drawRect
         d = ImageDraw.Draw(image)
-        d.rectangle(((left, top), (right, bottom)), "white")
+        d.rectangle(
+            ((left, top), (right - self.lineWidth, bottom - self.lineWidth)),
+            self.background,
+            self.color,
+            self.lineWidth,
+        )
         region = Region(self.screenRect) if self.dirty else Region()
         if self.children:
             widgetImage = image.crop((left, top, right, bottom))
