@@ -25,6 +25,7 @@ from . import _rm2fb
 
 from ._color import color_t
 from ._color import getrgb
+from ._color import image_to_i16
 
 from ._device import DeviceType
 from ._device import current
@@ -88,7 +89,7 @@ class FrameBuffer:
         return open(cls.path(), "r+b")
 
     @staticmethod
-    def size():
+    def size() -> int:
         """Get the size of the framebuffer in bytes"""
         size = implementation().getsize()
         assert size, "Framebuffer size is invalid"
@@ -408,7 +409,7 @@ class FrameBuffer:
         assert 0 < height <= cls.height() - top, f"height of {height} is invalid"
 
         if image.mode != IMAGE_MODE:
-            image = image.convert(IMAGE_MODE)
+            image = image_to_i16(image)
 
         data = (color_t * (image.width * image.height)).from_buffer_copy(
             image.tobytes()

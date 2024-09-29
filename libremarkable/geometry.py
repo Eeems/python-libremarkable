@@ -376,7 +376,7 @@ class Region(MutableSet[Rect]):
         """Add a rect to the region
 
         :param rect: rect to add"""
-        if rect in self:
+        if not rect or rect in self:
             return
 
         intersected = [x for x in self if x.intersects(rect)]
@@ -415,6 +415,9 @@ class Region(MutableSet[Rect]):
     @property
     def boundingRect(self) -> Rect:
         """Get a rectangle that contains all the rectangles in the region"""
+        if not self:
+            return Rect(0, 0, 0, 0)
+
         return Rect(
             min([x.left for x in self]),
             min([x.top for x in self]),
