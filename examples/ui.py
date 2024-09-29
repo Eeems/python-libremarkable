@@ -5,14 +5,19 @@ from libremarkable import FrameBuffer as fb
 from libremarkable._widgets import Scene
 from libremarkable._widgets import Text
 from libremarkable._widgets import Rectangle
+from libremarkable._widgets import Picture
 
 rectangle = Rectangle(0.45, 0.45, 0.55, 0.55)
 text = Text(0, 0, 1, 1, "Hello World!")
 rectangle.children.append(text)
-scene = Scene(fb, [rectangle])
+scene = Scene(
+    fb,
+    [
+        rectangle,
+        Picture(0, 0, 0.03, 0.03, "/opt/usr/share/icons/oxide/48x48/apps/image.png"),
+    ],
+)
 scene.update(True)
 sleep(1)
-# rectangle.move(-0.3, -0.3)
-rectangle.left -= 0.3
-rectangle.right -= 0.3
+rectangle.translate(-0.3, 0)
 scene.update()

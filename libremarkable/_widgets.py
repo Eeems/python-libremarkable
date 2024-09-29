@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from ._framebuffer import FrameBuffer
 from ._framebuffer import WaveformMode
 from ._framebuffer import DEFAULT_FONT_SIZE
@@ -105,7 +107,7 @@ class Widget:
         return self.rect.left
 
     @left.setter
-    def left(self, left: int):
+    def left(self, left: float):
         assert 0 <= left <= 1
         self.rect.left = left
 
@@ -114,7 +116,7 @@ class Widget:
         return self.rect.top
 
     @top.setter
-    def top(self, top: int):
+    def top(self, top: float):
         assert 0 <= top <= 1
         self.rect.top = top
 
@@ -123,7 +125,7 @@ class Widget:
         return self.rect.right
 
     @right.setter
-    def right(self, right: int):
+    def right(self, right: float):
         assert 0 <= right <= 1
         self.rect.right = right
 
@@ -132,7 +134,7 @@ class Widget:
         return self.rect.bottom
 
     @bottom.setter
-    def bottom(self, bottom: int):
+    def bottom(self, bottom: float):
         assert 0 <= bottom <= 1
         self.rect.bottom = bottom
 
@@ -140,9 +142,19 @@ class Widget:
     def width(self):
         return self.rect.width
 
+    @width.setter
+    def width(self, width: float):
+        assert 0 <= width <= 1
+        self.resize(width, self.height)
+
     @property
     def height(self):
         return self.rect.height
+
+    @height.setter
+    def height(self, height: float):
+        assert 0 <= height <= 1
+        self.resize(self.width, height)
 
     @property
     def changed(self) -> Iterable[Widget]:
@@ -179,13 +191,13 @@ class Widget:
             (0, 0, 0, 0),
         )
 
-    def move(self, x: float, y: float):
+    def translate(self, x: float, y: float):
         assert -1 <= x <= 1
         assert -1 <= y <= 1
+        w, h = self.width, self.height
         self.left += x
         self.top += y
-        self.right += x
-        self.bottom += x
+        self.resize(w, h)
 
     def resize(self, width: float, height: float):
         assert -1 <= width <= 1
@@ -246,9 +258,7 @@ class Widget:
             right = int(right - rect.left)
             bottom = int(bottom - rect.top)
 
-        background = image.crop((left, top, right, bottom))
-        composite = Image.alpha_composite(background, widgetImage)
-        image.paste(composite, (left, top), composite)
+        image.paste(widgetImage, (left, top), widgetImage)
         return region
 
 
@@ -301,3 +311,37 @@ class Rectangle(Widget):
             (self.screenRect.width, self.screenRect.height),
             self.color,
         )
+
+
+class Picture(Widget):
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float,
+        path: str,
+        color: str = "white",
+    ):
+        super().__init__(left, top, right, bottom)
+        assert os.path.exists(path)
+        self.path: str = path
+        self.color: str = color
+
+    @property
+    def image(self) -> Image:
+        image = Image.new(
+            "RGBA",
+            (self.screenRect.width, self.screenRect.height),
+            self.color,
+        )
+        thumbnail = Image.open(self.path)
+        thumbnail.thumbnail((self.screenRect.width, self.screenRect.height))
+        image.paste(
+            thumbnail,
+            (
+                (image.width - thumbnail.width) // 2,
+                (image.height - thumbnail.height) // 2,
+            ),
+        )
+        return image
