@@ -25,13 +25,15 @@ class Scene:
             widget.parent = ref(self)
 
         self.buffer = Image.new(
-            "RGBA", (self.fb.width(), self.fb.height()), "white"
+            "RGBA",
+            (self.fb.width(), self.fb.height()),
+            "white",
         )  #: Buffer for scene
 
     @property
     def screenRect(self) -> Rect:
         # TODO handle landscape
-        return Rect(0, 0, self.fb.height(), self.fb.width())
+        return Rect(0, 0, self.fb.width(), self.fb.height())
 
     @property
     def changed(self) -> Iterable[Widget]:
@@ -39,13 +41,16 @@ class Scene:
             if widget.dirty or list(widget.changed):
                 yield widget
 
-    def update(self):
+    def update(self, fullUpdate: bool = False):
         screenRect = self.screenRect
         # TODO handle landscape
         for widget in self.children:
             widget.layout(screenRect)
 
         region = Region()
+        if fullUpdate:
+            region += screenRect
+
         needsRepaint = Region()
         for widget in self.changed:
             paintedRegion = widget.paint(self.buffer)
@@ -174,6 +179,20 @@ class Widget:
             (0, 0, 0, 0),
         )
 
+    def move(self, x: float, y: float):
+        assert -1 <= x <= 1
+        assert -1 <= y <= 1
+        self.left += x
+        self.top += y
+        self.right += x
+        self.bottom += x
+
+    def resize(self, width: float, height: float):
+        assert -1 <= width <= 1
+        assert -1 <= height <= 1
+        self.right = self.left + width
+        self.bottom = self.top + height
+
     def layout(self, screenRect: Rect):
         self.oldScreenRect = self.screenRect
         self.screenRect = Rect(
@@ -234,9 +253,20 @@ class Widget:
 
 
 class Text(Widget):
-    text: str = ""
-    color: str = "black"
-    fontSize: int = DEFAULT_FONT_SIZE
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float,
+        text: str = "",
+        color: str = "black",
+        fontSize: int = DEFAULT_FONT_SIZE,
+    ):
+        super().__init__(left, top, right, bottom)
+        self.text: str = text
+        self.color: str = color
+        self.fontSize: int = fontSize
 
     @property
     def image(self) -> Image:
@@ -253,7 +283,16 @@ class Text(Widget):
 
 
 class Rectangle(Widget):
-    color: str = "white"
+    def __init__(
+        self,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float,
+        color: str = "white",
+    ):
+        super().__init__(left, top, right, bottom)
+        self.color: str = color
 
     @property
     def image(self) -> Image:
