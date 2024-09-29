@@ -325,6 +325,10 @@ class Text(Widget):
     color = widgetProperty("color", str)
     fontSize = widgetProperty("fontSize", int)
 
+    @property
+    def image(self) -> Image:
+        raise NotImplementedError()
+
     def paint(self, image: Image) -> Region:
         if self.screenRect is None or self.parent() is None or not self.screenRect:
             return Region()
@@ -338,10 +342,7 @@ class Text(Widget):
             self.color,
             font=ImageFont.load_default(size=self.fontSize),
         )
-        if self.dirty:
-            return Region(self.screenRect)
-
-        return Region()
+        return Region(self.screenRect) if self.dirty else Region()
 
 
 class Rectangle(Widget):
