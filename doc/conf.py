@@ -1,8 +1,11 @@
 import datetime
 import os
 import sys
+import builtins
 
 from intersphinx_registry import get_intersphinx_mapping
+
+builtins.__sphinx_build__ = True
 
 sys.path.insert(0, os.path.abspath(".."))
 

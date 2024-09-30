@@ -55,6 +55,15 @@ def implementation():
     if os.path.exists(_rm2fb.path()):
         return _rm2fb
 
+    if current == DeviceType.UNKNOWN:
+        try:
+            from . import _gtk
+
+            return _gtk
+        except ImportError as e:
+            print(e)
+            pass
+
     return _mxcfb
 
 
