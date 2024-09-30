@@ -26,9 +26,9 @@ from typing import Iterable
 
 
 class IChildWidgets:
-    def __init__(self, children: list[Widget] = [], *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._children = children
+    def __init__(self, *args, children: list[Widget] = [], **kwds):
+        super().__init__(*args, **kwds)
+        self._children = [] + children
         self._screenRect: Rect = Rect(0, 0, 0, 0)
         self._oldScreenRect: Rect = Rect(0, 0, 0, 0)
         for widget in self.children:
@@ -71,15 +71,15 @@ class Scene(IChildWidgets):
     def __init__(
         self,
         fb: FrameBuffer,
-        children: list[Widget] = [],
+        *args,
         background: str | tuple = "white",
+        **kwds,
     ):
         """Create a new scene
 
         :param fb: framebuffer instance to draw the scene to
-        :param children: widgets to add to the scene
         :param background: Background colour"""
-        super().__init__(children)
+        super().__init__(*args, **kwds)
         self.fb = fb  #: Framebuffer instance
 
         self.buffer = Image.new(
@@ -159,6 +159,19 @@ def widgetProperty(func: Callable[Self, Any] | str, T: type | None = None):
     .. code-block:: python
 
        class MyWidget(Widget):
+            def __init__(
+                self,
+                *args,
+                my_prop: str,
+                my_other_prop: str
+                **kwds
+            ):
+                super().__init__(*args, **kwds)
+                self._data = {
+                    'my_prop': my_prop,
+                    'my_other_prop': my_other_prop,
+                }
+
            my_prop: str = widgetProperty("my_prop", str)
 
            @widgetProperty
@@ -194,16 +207,17 @@ class Widget(IChildWidgets):
         top: float,
         right: float,
         bottom: float,
-        children: list[Widget] = [],
+        *args,
+        **kwds,
     ):
         assert 0 <= left <= 1
         assert 0 <= top <= 1
         assert 0 <= right <= 1
         assert 0 <= bottom <= 1
+        super().__init__(*args, **kwds)
         self.rect = Rect(left, top, right, bottom)
         self.parent: ref[Widget | Scene] = None  #: Parent widget or scene
         self.dirty: bool = True
-        super().__init__(children)
 
     @property
     def left(self):
@@ -374,6 +388,10 @@ class Widget(IChildWidgets):
 class IChildlessWidget:
     """Mixin to disable children on a widget"""
 
+    def __init__(self, *args, **kwds):
+        assert "children" not in kwds or not kwds["children"]
+        super().__init__(*args, **kwds)
+
     @override
     @safe_property
     def children(self) -> list[Widget]:
@@ -415,15 +433,13 @@ class Text(IChildlessWidget, IImagelessWidget, Widget):
 
     def __init__(
         self,
-        left: float,
-        top: float,
-        right: float,
-        bottom: float,
-        text: str = "",
+        text: str,
+        *args,
         color: str = "black",
         fontSize: int = DEFAULT_FONT_SIZE,
+        **kwds,
     ):
-        super().__init__(left, top, right, bottom)
+        super().__init__(*args, **kwds)
         self._data = {
             "text": text,
             "color": color,
@@ -456,23 +472,27 @@ class Rectangle(IImagelessWidget, Widget):
 
     def __init__(
         self,
-        left: float,
-        top: float,
-        right: float,
-        bottom: float,
+        *args,
         background: str = "white",
         color: str | None = None,
         lineWidth: int = 1,
+        radius: int = 0,
+        corners: tuple[bool, bool, bool, bool] | None = None,
+        **kwds,
     ):
-        super().__init__(left, top, right, bottom)
+        super().__init__(*args, **kwds)
         self._data = {
             "background": background,
             "color": color,
             "lineWidth": lineWidth,
+            "radius": radius,
+            "corners": corners,
         }
 
     background = widgetProperty("background", str | None)
     color = widgetProperty("color", str | None)
+    radius = widgetProperty("radius", int)
+    corners = widgetProperty("corners", tuple[bool, bool, bool, bool] | None)
 
     @widgetProperty
     def lineWidth(lineWidth: int):
@@ -482,12 +502,23 @@ class Rectangle(IImagelessWidget, Widget):
     def paint(self, image: Image) -> Region:
         left, top, right, bottom = self.drawRect
         d = ImageDraw.Draw(image)
-        d.rectangle(
-            ((left, top), (right - self.lineWidth, bottom - self.lineWidth)),
-            self.background,
-            self.color,
-            self.lineWidth,
+        xy = (
+            (left, top),
+            (right - (self.lineWidth / 2), bottom - (self.lineWidth / 2)),
         )
+        if self.radius:
+            d.rounded_rectangle(
+                xy,
+                self.radius,
+                self.background,
+                self.color,
+                self.lineWidth,
+                self.corners,
+            )
+
+        else:
+            d.rectangle(xy, self.background, self.color, self.lineWidth)
+
         region = Region(self.screenRect) if self.dirty else Region()
         if self.children:
             widgetImage = image.crop((left, top, right, bottom))
@@ -500,16 +531,8 @@ class Rectangle(IImagelessWidget, Widget):
 class Picture(IChildlessWidget, IImagelessWidget, Widget):
     """Image widget"""
 
-    def __init__(
-        self,
-        left: float,
-        top: float,
-        right: float,
-        bottom: float,
-        path: str,
-        background: str = "white",
-    ):
-        super().__init__(left, top, right, bottom)
+    def __init__(self, path: str, *args, background: str = "white", **kwds):
+        super().__init__(*args, **kwds)
         assert os.path.exists(path)
         self._data = {
             "path": path,
@@ -531,4 +554,52 @@ class Picture(IChildlessWidget, IImagelessWidget, Widget):
         thumbnail.thumbnail((self.screenRect.width, self.screenRect.height))
         image.paste(thumbnail, (left, top), thumbnail)
         region = Region(self.screenRect) if self.dirty else Region()
+        return region
+
+
+class Ellipse(IImagelessWidget, Widget):
+    """Ellipse widget"""
+
+    def __init__(
+        self,
+        *args,
+        background: str | None = None,
+        color: str | None = None,
+        lineWidth: int = 1,
+        **kwds,
+    ):
+        super().__init__(*args, **kwds)
+        self._data = {
+            "background": background,
+            "color": color,
+            "lineWidth": lineWidth,
+        }
+
+    background = widgetProperty("background", str | None)
+    color = widgetProperty("color", str | None)
+
+    @widgetProperty
+    def lineWidth(lineWidth: int):
+        assert lineWidth > 0
+
+    @override
+    def paint(self, image: Image) -> Region:
+        rect = self.drawRect
+        d = ImageDraw.Draw(image)
+        d.ellipse(
+            (
+                (rect.left, rect.top),
+                (rect.right - (self.lineWidth / 2), rect.bottom - (self.lineWidth / 2)),
+            ),
+            self.background,
+            self.color,
+            self.lineWidth,
+        )
+        region = Region(self.screenRect) if self.dirty else Region()
+        if self.children:
+            left, top, right, bottom = rect
+            widgetImage = image.crop((left, top, right, bottom))
+            region += self.paint_children(widgetImage, region)
+            image.paste(widgetImage, (left, top), widgetImage)
+
         return region
