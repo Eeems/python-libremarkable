@@ -3,12 +3,20 @@ import os
 from time import sleep
 
 from libremarkable import FrameBuffer as fb
+from libremarkable import Input
+from libremarkable import KeyEvent
 
 from libremarkable._widgets import Scene
 from libremarkable._widgets import Text
 from libremarkable._widgets import Rectangle
 from libremarkable._widgets import Picture
 from libremarkable._widgets import Ellipse
+
+from evdev.ecodes import KEY_DOWN
+from evdev.ecodes import KEY_UP
+from evdev.ecodes import KEY_LEFT
+from evdev.ecodes import KEY_RIGHT
+from evdev.ecodes import KEY_ESC
 
 image_path = "/opt/usr/share/icons/oxide/48x48/apps/image.png"
 if not os.path.exists(image_path):
@@ -42,3 +50,27 @@ scene.update()
 sleep(1)
 text.text = "Yo!"
 scene.update()
+
+for event in Input.events(block=True):
+    if not isinstance(event, KeyEvent) or event.keycode is None:
+        continue
+
+    if event.is_press:
+        continue
+
+    if event.keycode == KEY_UP:
+        rectangle.translate(0, -0.01)
+
+    elif event.keycode == KEY_DOWN:
+        rectangle.translate(0, 0.01)
+
+    elif event.keycode == KEY_LEFT:
+        rectangle.translate(-0.01, 0)
+
+    elif event.keycode == KEY_RIGHT:
+        rectangle.translate(0.01, 0)
+
+    elif event.keycode == KEY_ESC:
+        break
+
+    scene.update()
