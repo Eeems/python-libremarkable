@@ -1,4 +1,5 @@
 import gi
+import os
 import atexit
 
 from threading import Thread
@@ -21,7 +22,8 @@ from gi.repository import Gtk  # noqa: E402
 _app = None
 _image = None
 _file = NamedTemporaryFile()
-_png = NamedTemporaryFile(suffix=".png")
+_png = NamedTemporaryFile(suffix=".png", delete=False, delete_on_close=False)
+_png.close()
 
 
 def _on_activate(app):
@@ -44,7 +46,7 @@ def _on_exit():
     global _png
     global _file
     if _png is not None:
-        _png.close()
+        os.unlink(_png.name)
 
     if _file is not None:
         _file.close()
@@ -117,8 +119,11 @@ def update(data: mxcfb_update_data) -> None:
     global _image
     if _png is None:
         return
-
-    _ensure_fb()["image"].save(_png.name)
+    Image.frombuffer(
+        IMAGE_MODE,
+        (virtual_width(), virtual_height()),
+        _ensure_fb()["mm"],
+    ).save(_png.name)
     if _image is not None:
         _image.set_from_file(_png.name)
 
