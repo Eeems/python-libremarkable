@@ -70,7 +70,9 @@ def image_to_i16(image: Image) -> Image:
     if image.mode == "I;16":
         return image
 
-    assert image.mode in ("RGB", "RGBA")
+    if image.mode not in ("RGB", "RGBA"):
+        return image.convert("I;16")
+
     bands = image.getbands()
     r = bands.index("R")
     g = bands.index("G")
