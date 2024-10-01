@@ -248,16 +248,16 @@ $(EXAMPLE_BIN_TARGETS):dist/%.bin:  $(OBJ) examples/%.py
 	  eeems/nuitka-arm-builder:bullseye-3.11 \
 	  bash -ec "$$EXECUTABLE_SCRIPT"
 
-EXAMPLE_DEPLOY_TARGETS = $(patsubst examples/%.py, deploy-example-%, $(EXAMPLES))
-$(EXAMPLE_DEPLOY_TARGETS):deploy-example-%: dist/%.bin
+EXAMPLE_DEPLOY_TARGETS = $(patsubst examples/%.py, deploy-example_%, $(EXAMPLES))
+$(EXAMPLE_DEPLOY_TARGETS):deploy-example_%: dist/%.bin
 	ssh root@10.11.99.1 "mkdir -p /tmp/libremarkable"
 	name=$@; \
 	name=$${name:15}; \
 	rsync dist/$$name.bin root@10.11.99.1:/tmp/libremarkable
 
-EXAMPLE_TEST_TARGETS = $(patsubst examples/%.py, test-example-%, $(EXAMPLES))
+EXAMPLE_TEST_TARGETS = $(patsubst examples/%.py, test-example_%, $(EXAMPLES))
 .PHONY: $(EXAMPLE_TEST_TARGETS) # Run a binary of an example script on the tablet
-$(EXAMPLE_TEST_TARGETS):test-example-%: deploy-example-%
+$(EXAMPLE_TEST_TARGETS):test-example_%: deploy-example-%
 	name=$@; \
 	name=$${name:13}; \
 	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/libremarkable /tmp/libremarkable/$$name.bin"
