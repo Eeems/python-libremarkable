@@ -1,0 +1,29 @@
+# yamllint disable rule:line-length
+# yamllint disable rule:indentation
+# yamllint disable rule:comments-indentation
+# too many spelling things, spell-checker: disable
+---
+- module-name: 'libremarkable'
+  dlls:
+    - by_code:
+        setup_code: |
+          import os
+          import sys
+          library_path = "/usr/lib/arm-linux-gnueabihf"
+          library_prefixes = (
+            "libopenjp2",
+            "libxcb",
+            "libXau",
+            "libXdmcp",
+            "libbsd",
+            "libmd",
+          )
+        filename_code: |
+          [
+            os.path.join(library_path, filename)
+            for filename in os.listdir(library_path)
+            if filename.startswith(library_prefixes)
+            and ".so" in filename
+          ]
+      dest_path: '.'
+      when: 'linux and (standalone or onefile)'

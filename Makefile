@@ -105,36 +105,12 @@ python -m nuitka \
     --assume-yes-for-downloads \
     --remove-output \
     --output-dir=dist \
+    --onefile \
     --report=compilation-report.xml \
-    test.py
+    --user-package-configuration-file=libremarkable/libremarkable.config.yml \
+    $$file
 endef
 export EXECUTABLE_SCRIPT
-define TAR_SCRIPT
-echo "[info] Installing dependencies"
-export DEBIAN_FRONTEND="noninteractive"
-apt-get -y update
-apt-get install -y \
-  libtiff5 \
-  libjpeg62-turbo \
-  libopenjp2-7 \
-  zlib1g \
-  libfreetype6 \
-  tcl8.6 \
-  tk8.6 \
-  python3-tk \
-  libxcb1
-cd /usr/lib/arm-linux-gnueabihf
-tar -czf /src/dist/test.tar.gz \
-  libopenjp2.so.* \
-  libxcb.so.* \
-  libXau.so.* \
-  libXdmcp.so.* \
-  libbsd.so.* \
-  libmd.so.* \
-  -C /src/dist \
-  test.bin
-endef
-export TAR_SCRIPT
 
 ifeq ($(VENV_BIN_ACTIVATE),)
 VENV_BIN_ACTIVATE := .venv/bin/activate
@@ -203,35 +179,22 @@ test: lint format $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python test.py
 
-dist/test.bin: $(shell find libremarkable -type f) test.py
+dist/test.bin: $(OBJ) test.py
 	docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
 	docker run \
 	  --rm \
 	  --platform=linux/arm/v7 \
 	  -v "$$(pwd)":/src \
+	  -e file=test.py \
 	  eeems/nuitka-arm-builder:bullseye-3.11 \
 	  bash -ec "$$EXECUTABLE_SCRIPT"
 
-dist/test.tar.gz: dist/test.bin
-	docker run \
-	  --rm \
-	  --privileged \
-	  tonistiigi/binfmt \
-	  --install linux/arm/v7
-	docker run \
-	  --rm \
-	  --platform=linux/arm/v7 \
-	  -v "$$(pwd)":/src \
-	  eeems/nuitka-arm-builder:bullseye-3.11 \
-	  bash -ec "$$TAR_SCRIPT"
-
-deploy-executable: dist/test.tar.gz
-	ssh root@10.11.99.1 "mkdir -p /tmp/test"
-	rsync dist/test.tar.gz root@10.11.99.1:/tmp
-	ssh root@10.11.99.1 "tar -C /tmp/test -zxf /tmp/test.tar.gz"
+deploy-executable: dist/test.bin
+	ssh root@10.11.99.1 "mkdir -p /tmp/libremarkable"
+	rsync dist/test.bin root@10.11.99.1:/tmp/libremarkable
 
 test-executable: deploy-executable
-	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/test /tmp/test/test.bin"
+	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/libremarkable /tmp/libremarkable/test.bin"
 
 lint: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
@@ -249,8 +212,37 @@ format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format
 
-$(wildcard examples/*.py):%: lint format install
-	cat $@ | $(REMOTE_PYTHON)
+EXAMPLES := $(wildcard examples/*.py)
+
+EXAMPLE_TARGETS = $(patsubst examples/%.py, example_%, $(EXAMPLES))
+$(EXAMPLE_TARGETS):example_%: lint format install examples/%.py
+	name=$@; \
+	name=$${name:8}; \
+	cat examples/$$name.py | $(REMOTE_PYTHON)
+
+EXAMPLE_BIN_TARGETS = $(patsubst examples/%.py, dist/%.bin, $(EXAMPLES))
+$(EXAMPLE_BIN_TARGETS):dist/%.bin:  $(OBJ) examples/%.py
+	docker run --privileged --rm tonistiigi/binfmt --install linux/arm/v7
+	docker run \
+	  --rm \
+	  --platform=linux/arm/v7 \
+	  -v "$$(pwd)":/src \
+	  -e file=examples/$$(basename --suffix .bin $@).py \
+	  eeems/nuitka-arm-builder:bullseye-3.11 \
+	  bash -ec "$$EXECUTABLE_SCRIPT"
+
+EXAMPLE_DEPLOY_TARGETS = $(patsubst examples/%.py, deploy-example-%, $(EXAMPLES))
+$(EXAMPLE_DEPLOY_TARGETS):deploy-example-%: dist/%.bin
+	ssh root@10.11.99.1 "mkdir -p /tmp/libremarkable"
+	name=$@; \
+	name=$${name:15}; \
+	rsync dist/$$name.bin root@10.11.99.1:/tmp/libremarkable
+
+EXAMPLE_TEST_TARGETS = $(patsubst examples/%.py, test-example-%, $(EXAMPLES))
+$(EXAMPLE_TEST_TARGETS):test-example-%: deploy-example-%
+	name=$@; \
+	name=$${name:13}; \
+	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/libremarkable /tmp/libremarkable/$$name.bin"
 
 doc: $(VENV_BIN_SPHINX)
 	$(VENV_BIN_SPHINX) -a -n -E -b html doc dist/doc
@@ -276,4 +268,6 @@ doc-dev: $(VENV_BIN_SPHINX_AUTOBUILD)
 	wheel \
 	srcdist \
 	doc \
-	doc-dev
+	doc-dev \
+	$(EXAMPLE_DEPLOY_TARGETS) \
+	$(EXAMPLE_TEST_TARGETS)
