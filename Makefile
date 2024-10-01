@@ -157,24 +157,31 @@ dist/libremarkable-${VERSION}-py3-none-any.whl: $(VENV_BIN_ACTIVATE)  $(OBJ)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m build --wheel
 
+.PHONY: clean # Clean the directory of any build artifacts
 clean:
 	git clean --force -dX
 
+.PHONY: wheel # build a wheel for the library
 wheel: dist/libremarkable-${VERSION}-py3-none-any.whl
 
+.PHONY: srcdist # Build a srcdist for the library
 srcdist: dist/libremarkable-${VERSION}.tar.gz
 
+.PHONY: deploy # Deploy the library to the tablet
 deploy: dist/libremarkable-${VERSION}-py3-none-any.whl
 	ssh root@10.11.99.1 mkdir -p /opt/include/linux
 	rsync vendor/input-event-codes.h root@10.11.99.1:/opt/include/linux/
 	rsync dist/libremarkable-${VERSION}-py3-none-any.whl root@10.11.99.1:/tmp
 
+.PHONY: install # Install the library on the tablet
 install: deploy
 	printf "%s\n" "$$INSTALL_SCRIPT" | ssh root@10.11.99.1 bash -le
 
+.PHONY: test-device # Run test.py on the tablet
 test-device: lint format install
 	cat test.py | $(REMOTE_PYTHON)
 
+.PHONY: test # Run test.py
 test: lint format $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python test.py
@@ -189,25 +196,31 @@ dist/test.bin: $(OBJ) test.py
 	  eeems/nuitka-arm-builder:bullseye-3.11 \
 	  bash -ec "$$EXECUTABLE_SCRIPT"
 
+.PHONY: deploy-executable # Deploy an executable of test.py to the tablet
 deploy-executable: dist/test.bin
 	ssh root@10.11.99.1 "mkdir -p /tmp/libremarkable"
 	rsync dist/test.bin root@10.11.99.1:/tmp/libremarkable
 
+.PHONY: test-executable # Run an executable of test.py on the tablet
 test-executable: deploy-executable
 	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/libremarkable /tmp/libremarkable/test.bin"
 
+.PHONY: lint # Lint the project
 lint: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff check
 
+.PHONY: lint-fix # Lint the project and apply any fixes
 lint-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff check
 
+.PHONY: format # Check the format of the project
 format: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format --diff
 
+.PHONY: format-fix # Check the format of the project and apply any fixes
 format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format
@@ -215,10 +228,14 @@ format-fix: $(VENV_BIN_ACTIVATE)
 EXAMPLES := $(wildcard examples/*.py)
 
 EXAMPLE_TARGETS = $(patsubst examples/%.py, example_%, $(EXAMPLES))
+.PHONY: $(EXAMPLE_TARGETS) # Run an example script on the tablet
 $(EXAMPLE_TARGETS):example_%: lint format install examples/%.py
 	name=$@; \
 	name=$${name:8}; \
 	cat examples/$$name.py | $(REMOTE_PYTHON)
+
+$$(EXAMPLE_TARGETS):
+	@echo ${EXAMPLE_TARGETS} | xargs -n1
 
 EXAMPLE_BIN_TARGETS = $(patsubst examples/%.py, dist/%.bin, $(EXAMPLES))
 $(EXAMPLE_BIN_TARGETS):dist/%.bin:  $(OBJ) examples/%.py
@@ -239,14 +256,20 @@ $(EXAMPLE_DEPLOY_TARGETS):deploy-example-%: dist/%.bin
 	rsync dist/$$name.bin root@10.11.99.1:/tmp/libremarkable
 
 EXAMPLE_TEST_TARGETS = $(patsubst examples/%.py, test-example-%, $(EXAMPLES))
+.PHONY: $(EXAMPLE_TEST_TARGETS) # Run a binary of an example script on the tablet
 $(EXAMPLE_TEST_TARGETS):test-example-%: deploy-example-%
 	name=$@; \
 	name=$${name:13}; \
 	ssh root@10.11.99.1 "LD_LIBRARY_PATH=/tmp/libremarkable /tmp/libremarkable/$$name.bin"
 
+$$(EXAMPLE_TEST_TARGETS):
+	@echo ${EXAMPLE_TEST_TARGETS} | xargs -n1
+
+.PHONY: doc # Build documentation
 doc: $(VENV_BIN_SPHINX)
 	$(VENV_BIN_SPHINX) -a -n -E -b html doc dist/doc
 
+.PHONY: doc-dev # Automatically build documentation when there are changes
 doc-dev: $(VENV_BIN_SPHINX_AUTOBUILD)
 	$(VENV_BIN_SPHINX_AUTOBUILD) \
 	    --port=0 \
@@ -254,20 +277,30 @@ doc-dev: $(VENV_BIN_SPHINX_AUTOBUILD)
 	    --watch libremarkable \
 	    -a doc dist/doc
 
-.PHONY: \
-	clean \
-	install \
-	test \
-	deploy \
-	test-device \
-	test-executable \
-	deploy-executable \
-	lint \
-	format \
-	_ruff \
-	wheel \
-	srcdist \
-	doc \
-	doc-dev \
-	$(EXAMPLE_DEPLOY_TARGETS) \
-	$(EXAMPLE_TEST_TARGETS)
+.PHONY: help # List all available targets
+help:
+	@expand_variables(){ \
+	  col=24; \
+	  size=$$(tput cols); \
+	  size=$$(($$size - $$col)); \
+	  indent=$$(echo "\t" | expand -t10); \
+	  while read -r line; do \
+	    name=$$(echo "$$line" | cut -f1); \
+	    echo -e "$$name$$( \
+	      echo "$$line" \
+	      | cut -f2 \
+	      | xargs -I % echo -e "\t%" \
+	      | fmt -w$$size \
+	    )" \
+	    | expand -t$$col; \
+	    if [[ "$$name" != "$$"* ]];then \
+	      continue; \
+	    fi; \
+	    $(MAKE) --debug=none --no-print-directory $$name \
+	    | xargs -I % echo -e "  %" \
+	    | expand -t$$col; \
+	  done; \
+	}; \
+	grep '^.PHONY: .* #' Makefile \
+	| sed 's/\.PHONY: \(.*\) # \(.*\)/\1\t\2/' \
+	| expand_variables
