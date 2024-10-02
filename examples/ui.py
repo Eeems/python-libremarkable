@@ -22,6 +22,9 @@ image_path = "/opt/usr/share/icons/oxide/48x48/apps/image.png"
 if not os.path.exists(image_path):
     image_path = "/usr/share/icons/hicolor/48x48/status/bluetooth-active.png"
 
+if not os.path.exists(image_path):
+    image_path = "/usr/share/icons/hicolor/48x48/status/view-minimize.png"
+
 text = Text("Hello World!", 0.015, 0.015, 0.985, 0.985)
 rectangle = Rectangle(
     0.45,

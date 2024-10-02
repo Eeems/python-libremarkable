@@ -61,8 +61,8 @@ def implementation():
 
             return _gtk
         except ImportError as e:
-            print(e)
-            pass
+            if e.name != "gi":
+                raise
 
     return _mxcfb
 

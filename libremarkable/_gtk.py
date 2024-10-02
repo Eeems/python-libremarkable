@@ -1,6 +1,7 @@
 import gi
 import os
 import atexit
+import signal
 
 from threading import Thread
 from PIL import Image
@@ -39,6 +40,11 @@ def _on_activate(app):
     )
     _image = Gtk.Image.new_from_file(_png.name)
     win.set_child(_image)
+
+    def _on_close(win):
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    win.connect("destroy", _on_close)
     win.present()
 
 
